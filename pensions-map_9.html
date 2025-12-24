@@ -1,0 +1,3011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pensions MAP - Pension Drawdown Model</title>
+    <style>
+        :root {
+            --primary: #2c5282;
+            --primary-light: #4299e1;
+            --success: #38a169;
+            --warning: #dd6b20;
+            --danger: #e53e3e;
+            --bg: #f7fafc;
+            --card-bg: #ffffff;
+            --text: #2d3748;
+            --text-muted: #718096;
+            --border: #e2e8f0;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container { max-width: 1800px; margin: 0 auto; }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 24px 32px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        header h1 { font-size: 1.8rem; margin-bottom: 4px; }
+        header p { opacity: 0.9; font-size: 0.95rem; }
+        
+        .grid { display: grid; gap: 20px; }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid var(--border);
+        }
+        
+        .card h2 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .input-group {
+            margin-bottom: 14px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        
+        .input-group input[type="number"],
+        .input-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .input-group input[type="number"]:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+        }
+        
+        .input-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .input-row .input-group { flex: 1; margin-bottom: 0; }
+        
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        
+        .toggle-group label { margin-bottom: 0; font-size: 0.9rem; }
+        
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+        
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: #cbd5e0;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+        
+        .toggle-slider:before {
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        
+        .toggle input:checked + .toggle-slider { background: var(--success); }
+        .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .summary-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 16px 20px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        
+        .summary-card.warning { border-left: 4px solid var(--warning); }
+        .summary-card.danger { border-left: 4px solid var(--danger); }
+        .summary-card.success { border-left: 4px solid var(--success); }
+        
+        .summary-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .summary-card.danger .value { color: var(--danger); }
+        .summary-card.warning .value { color: var(--warning); }
+        .summary-card.success .value { color: var(--success); }
+        
+        .summary-card .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        
+        .chart-container {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+        
+        .chart-container h2 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+        
+        canvas { width: 100% !important; height: 300px !important; }
+        
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        
+        .table-container h2 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            margin: 0;
+        }
+        
+        .table-scroll {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            min-width: 2200px;
+        }
+        
+        th, td {
+            padding: 10px 12px;
+            text-align: right;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: var(--text-muted);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        th:first-child, td:first-child {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: #f8fafc;
+            z-index: 5;
+        }
+        
+        td:first-child { background: var(--card-bg); }
+        
+        tr:hover td { background: #f7fafc; }
+        tr:hover td:first-child { background: #f7fafc; }
+        
+        .negative { color: var(--danger); font-weight: 600; }
+        .positive { color: var(--success); font-weight: 600; }
+        .highlight { background: #fefce8 !important; }
+        .exhausted { background: #fee2e2 !important; }
+        
+        .section-title {
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin: 24px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary-light);
+        }
+        
+        .person-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .person-badge {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .person-badge.secondary { background: var(--success); }
+        
+        .db-section { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); }
+        .db-section h3 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            header { padding: 16px 20px; }
+            header h1 { font-size: 1.4rem; }
+        }
+        
+        .opt-button {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            white-space: nowrap;
+        }
+        
+        .opt-button:hover { background: var(--primary-light); }
+        .opt-button:active { transform: scale(0.98); }
+        
+        .opt-button-primary {
+            background: var(--success);
+            padding: 12px 20px;
+            font-size: 0.95rem;
+        }
+        
+        .opt-button-primary:hover { background: #2f855a; }
+        
+        .opt-result {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #276749;
+            display: none;
+        }
+        
+        .opt-result.visible { display: block; }
+        .opt-result.warning { background: #fffbeb; border-color: #fbd38d; color: #975a16; }
+        .opt-result.error { background: #fff5f5; border-color: #feb2b2; color: #c53030; }
+        
+        .opt-result strong { font-weight: 600; }
+        
+        .alerts-section {
+            margin: 24px 0;
+        }
+        
+        .alert-box {
+            background: #fff5f5;
+            border: 1px solid #fc8181;
+            border-left: 4px solid #e53e3e;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+        }
+        
+        .alert-box.warning {
+            background: #fffbeb;
+            border-color: #f6ad55;
+            border-left-color: #dd6b20;
+        }
+        
+        .alert-box h3 {
+            color: #c53030;
+            font-size: 1rem;
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .alert-box.warning h3 { color: #c05621; }
+        
+        .alert-box p {
+            color: #742a2a;
+            font-size: 0.9rem;
+            margin: 0;
+            line-height: 1.5;
+        }
+        
+        .alert-box.warning p { color: #7b341e; }
+        
+        .alert-box .detail {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #feb2b2;
+            font-size: 0.85rem;
+        }
+        
+        .alert-box.warning .detail { border-top-color: #fbd38d; }
+        
+        .income-limited { 
+            background: #fef3c7 !important; 
+        }
+        
+        .income-limited td {
+            background: #fef3c7 !important;
+        }
+        
+        .editable-cell {
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .editable-cell:hover {
+            background: #e2e8f0 !important;
+        }
+        
+        .editable-cell.has-override {
+            background: #c6f6d5 !important;
+            font-weight: 600;
+        }
+        
+        .editable-cell.has-override::after {
+            content: '✎';
+            font-size: 0.7rem;
+            margin-left: 4px;
+            color: #38a169;
+        }
+        
+        .editable-cell input {
+            width: 80px;
+            padding: 4px 6px;
+            border: 2px solid var(--primary);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            text-align: right;
+        }
+        
+        .locked-cell {
+            background: #fed7d7 !important;
+            color: #742a2a;
+            cursor: not-allowed;
+        }
+        
+        .header-group th {
+            text-align: center;
+        }
+        
+        /* Column group borders */
+        thead tr:first-child th[colspan="9"]:first-of-type {
+            border-right: 2px solid #1a365d;
+        }
+        
+        thead tr:first-child th[colspan="9"]:nth-of-type(2) {
+            border-right: 2px solid #1a4731;
+        }
+        
+        /* Subtle column group borders in body - after Infl (col 2), EI (col 11) and AI (col 20) */
+        tbody td:nth-child(2) {
+            border-right: 2px solid #e2e8f0;
+        }
+        
+        tbody td:nth-child(11) {
+            border-right: 2px solid #e2e8f0;
+        }
+        
+        tbody td:nth-child(20) {
+            border-right: 2px solid #e2e8f0;
+        }
+        
+        .clear-override-btn {
+            background: #fc8181;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin-left: 4px;
+        }
+        
+        .clear-override-btn:hover {
+            background: #e53e3e;
+        }
+        
+        .clear-all-overrides {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        
+        .clear-all-overrides:hover {
+            background: #c53030;
+        }
+        
+        /* Toolbar styles */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #edf2f7;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .toolbar-btn {
+            padding: 8px 16px;
+            border: 1px solid #cbd5e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .toolbar-btn:hover {
+            background: #f7fafc;
+            border-color: var(--primary);
+        }
+        
+        .toolbar-btn-print {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .toolbar-btn-print:hover {
+            background: #1e3a5f;
+        }
+        
+        /* Print styles */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+            
+            .toolbar, .card button, .opt-button, .clear-all-overrides, 
+            .editable-cell input, #clearAllOverrides, .grid, .alerts-section,
+            .summary-grid, .chart-container, footer, .opt-result {
+                display: none !important;
+            }
+            
+            body {
+                font-size: 8pt;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .container {
+                max-width: 100%;
+                padding: 0;
+            }
+            
+            header {
+                margin-bottom: 10px;
+            }
+            
+            header h1 {
+                font-size: 16pt;
+                margin-bottom: 2px;
+            }
+            
+            header p {
+                font-size: 10pt;
+            }
+            
+            .table-container {
+                overflow: visible;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .table-container > div:first-child {
+                display: none !important;
+            }
+            
+            table {
+                font-size: 6.5pt;
+                min-width: auto !important;
+                width: 100%;
+                border-collapse: collapse;
+            }
+            
+            th, td {
+                padding: 2px 3px !important;
+                white-space: nowrap;
+            }
+            
+            th {
+                background: #f0f0f0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .header-group th {
+                background: #666 !important;
+                color: white !important;
+            }
+            
+            .section-title {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pensions MAP</h1>
+            <p>Model and Analyse Pensions – Interactive Drawdown Calculator</p>
+        </header>
+        
+        <!-- Scenario Management Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="saveScenario" title="Save current scenario">
+                    💾 Save Scenario
+                </button>
+                <button class="toolbar-btn" id="setSaveFolder" title="Choose default save folder (Chrome/Edge only)">
+                    📁 Set Save Folder
+                </button>
+                <button class="toolbar-btn" id="loadScenario" title="Load saved scenario">
+                    📂 Load Scenario
+                </button>
+                <input type="file" id="loadScenarioFile" accept=".json" style="display: none;">
+            </div>
+            <div class="toolbar-group">
+                <span id="saveFolderStatus" style="font-size: 0.8rem; color: var(--text-muted); margin-right: 10px;"></span>
+                <button class="toolbar-btn toolbar-btn-print" id="printScenario" title="Print to PDF">
+                    🖨️ Print / PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-3">
+            <!-- Global Parameters -->
+            <div class="card">
+                <h2>Global Parameters</h2>
+                <div class="input-row" style="align-items: flex-end; gap: 8px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>DB Pension Annual Growth Rate (%)</label>
+                        <input type="number" id="dbGrowthRate" value="3" step="0.1" min="0" max="20">
+                    </div>
+                    <div class="toggle-group" style="margin-bottom: 0; padding-bottom: 8px;">
+                        <label class="toggle">
+                            <input type="checkbox" id="dbGrowthEnabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="input-row" style="align-items: flex-end; gap: 8px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>DC (Parmenion) Growth Rate (%)</label>
+                        <input type="number" id="dcGrowthRate" value="6" step="0.1" min="0" max="20">
+                    </div>
+                    <div class="toggle-group" style="margin-bottom: 0; padding-bottom: 8px;">
+                        <label class="toggle">
+                            <input type="checkbox" id="dcGrowthEnabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="input-row" style="align-items: flex-end; gap: 8px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>State Pension Growth Rate (%)</label>
+                        <input type="number" id="statePensionGrowthRate" value="3" step="0.1" min="0" max="20">
+                    </div>
+                    <div class="toggle-group" style="margin-bottom: 0; padding-bottom: 8px;">
+                        <label class="toggle">
+                            <input type="checkbox" id="statePensionGrowthEnabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Annual Living Costs (£)</label>
+                    <input type="number" id="annualLivingCosts" value="30000" step="1000" min="0">
+                </div>
+                <div class="toggle-group">
+                    <label>Apply Inflation to Living Costs</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="livingCostsInflation">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- EI Parameters -->
+            <div class="card">
+                <div class="person-header">
+                    <span class="person-badge">EI</span>
+                </div>
+                <div class="input-group">
+                    <label>Target Annual Gross Income (£)</label>
+                    <input type="number" id="eugeneTargetIncome" value="50000" step="1000" min="0">
+                </div>
+                <div class="toggle-group">
+                    <label>Apply Inflation to Target</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="eugeneInflation" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="input-group">
+                    <label>Monthly Pension Contributions (£)</label>
+                    <input type="number" id="eugeneMonthlyContrib" value="1500" step="100" min="0">
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>Pot 1 Balance (£) <span style="font-size: 0.75rem; color: var(--text-muted);">Lump sum taken</span></label>
+                        <input type="number" id="eugenePot1Balance" value="286343" step="1000" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label>Pot 2 Balance (£) <span style="font-size: 0.75rem; color: var(--text-muted);">Lump sum available</span></label>
+                        <input type="number" id="eugenePot2Balance" value="54239" step="1000" min="0">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Age in 2025</label>
+                    <input type="number" id="eugeneAge2025" value="61" step="1" min="18" max="100">
+                </div>
+                <div class="input-group">
+                    <label>Stop Contributions Year</label>
+                    <input type="number" id="eugeneContribStopYear" value="2029" step="1" min="2025" max="2063">
+                </div>
+            </div>
+
+            <!-- AI Parameters -->
+            <div class="card">
+                <div class="person-header">
+                    <span class="person-badge secondary">AI</span>
+                </div>
+                <div class="input-group">
+                    <label>Target Annual Gross Income (£)</label>
+                    <input type="number" id="annabelleTargetIncome" value="12500" step="1000" min="0">
+                </div>
+                <div class="toggle-group">
+                    <label>Apply Inflation to Target</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="annabelleInflation" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="input-group">
+                    <label>Monthly Pension Contributions (£)</label>
+                    <input type="number" id="annabelleMonthlyContrib" value="2500" step="100" min="0">
+                </div>
+                <div class="input-group">
+                    <label>Starting Parmenion Balance (£)</label>
+                    <input type="number" id="annabelleStartingBalance" value="55273" step="1000" min="0">
+                </div>
+                <div class="input-group">
+                    <label>Age in 2025</label>
+                    <input type="number" id="annabelleAge2025" value="53" step="1" min="18" max="100">
+                </div>
+                <div class="input-group">
+                    <label>Stop Contributions Year</label>
+                    <input type="number" id="annabelleContribStopYear" value="2029" step="1" min="2025" max="2063">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tax Parameters & Inflation -->
+        <div class="grid grid-2" style="margin-top: 20px;">
+            <div class="card">
+                <h2>UK Tax Bands</h2>
+                
+                <!-- Base Thresholds (Frozen Period) -->
+                <div style="margin-bottom: 14px;">
+                    <h3 style="font-size: 0.9rem; margin-bottom: 8px;">Base Thresholds (Frozen Period)</h3>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Personal Allowance (£)</label>
+                            <input type="number" id="personalAllowance" value="12570" step="100">
+                        </div>
+                        <div class="input-group">
+                            <label>Basic Rate Threshold (£)</label>
+                            <input type="number" id="basicRateThreshold" value="50270" step="100">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tax Rates -->
+                <div class="input-row" style="margin-bottom: 14px;">
+                    <div class="input-group">
+                        <label>Basic Rate (%)</label>
+                        <input type="number" id="basicRate" value="20" step="1" min="0" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label>Higher Rate (%)</label>
+                        <input type="number" id="higherRate" value="40" step="1" min="0" max="100">
+                    </div>
+                </div>
+                
+                <!-- New Thresholds from Year -->
+                <div style="border-top: 1px solid var(--border); padding-top: 14px; margin-top: 10px;">
+                    <h3 style="font-size: 0.9rem; margin-bottom: 8px;">New Thresholds From Year</h3>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <label title="Year from which new threshold values apply">Apply new thresholds from</label>
+                        <input type="number" id="taxNewThresholdsYear" value="2031" step="1" min="2025" max="2054">
+                    </div>
+                    <div class="input-row" style="margin-bottom: 10px;">
+                        <div class="input-group">
+                            <label>New Personal Allowance (£)</label>
+                            <input type="number" id="taxNewPersonalAllowance" value="12570" step="100">
+                        </div>
+                        <div class="input-group">
+                            <label>New Basic Rate Threshold (£)</label>
+                            <input type="number" id="taxNewBasicRateThreshold" value="50270" step="100">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Post-Freeze Threshold Growth -->
+                <div style="border-top: 1px solid var(--border); padding-top: 14px; margin-top: 10px;">
+                    <h3 style="font-size: 0.9rem; margin-bottom: 10px;">Annual Threshold Growth</h3>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <label title="How much tax thresholds increase annually from the new thresholds year">
+                            Growth Rate (applied from new thresholds year)
+                        </label>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+                            <label class="radio-label" style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                <input type="radio" name="taxGrowthPreset" value="0" id="taxGrowth0">
+                                <span>0%</span>
+                            </label>
+                            <label class="radio-label" style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                <input type="radio" name="taxGrowthPreset" value="2" id="taxGrowth2" checked>
+                                <span>2%</span>
+                            </label>
+                            <label class="radio-label" style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                <input type="radio" name="taxGrowthPreset" value="3" id="taxGrowth3">
+                                <span>3%</span>
+                            </label>
+                            <label class="radio-label" style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                <input type="radio" name="taxGrowthPreset" value="custom" id="taxGrowthCustom">
+                                <span>Custom:</span>
+                            </label>
+                            <input type="number" id="taxGrowthCustomRate" value="2" step="0.1" min="0" max="10" 
+                                   style="width: 60px;" disabled>
+                            <span>%</span>
+                        </div>
+                    </div>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+                    💡 Base thresholds apply until new thresholds year. Growth applies from new thresholds year onwards.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>Inflation Rate</h2>
+                <div class="input-group" style="margin-bottom: 14px;">
+                    <label>Base Rate (%)</label>
+                    <input type="number" id="inflationBaseRate" value="3" step="0.1" min="0" max="20">
+                </div>
+                <div class="input-row" style="align-items: flex-end; gap: 8px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>Change rate from year</label>
+                        <input type="number" id="inflationChangeYear" value="2025" step="1" min="2025" max="2054">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label>New Rate (%)</label>
+                        <input type="number" id="inflationNewRate" value="3" step="0.1" min="0" max="20">
+                    </div>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+                    💡 Base rate applies until the change year, then the new rate applies
+                </p>
+            </div>
+        </div>
+
+        <!-- DB Pensions Configuration -->
+        <div class="grid grid-2" style="margin-top: 20px;">
+            <div class="card">
+                <h2>EI's DB Pensions</h2>
+                <div class="db-section">
+                    <h3>State Pension</h3>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Start Year</label>
+                            <input type="number" id="eugeneStateYear" value="2031" step="1" min="2025" max="2063">
+                        </div>
+                        <div class="input-group">
+                            <label>Annual Amount (£)</label>
+                            <input type="number" id="eugeneStateAmount" value="12014" step="100" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="db-section">
+                    <h3>Avon Pension</h3>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Start Year</label>
+                            <input type="number" id="eugeneAvonYear" value="2030" step="1" min="2025" max="2063">
+                        </div>
+                        <div class="input-group">
+                            <label>Annual Amount (£)</label>
+                            <input type="number" id="eugeneAvonAmount" value="5900" step="100" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="db-section">
+                    <h3>Civil Service Pension</h3>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Start Year</label>
+                            <input type="number" id="eugeneCivilYear" value="2030" step="1" min="2025" max="2063">
+                        </div>
+                        <div class="input-group">
+                            <label>Annual Amount (£)</label>
+                            <input type="number" id="eugeneCivilAmount" value="4850" step="100" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="db-section">
+                    <h3>Lump Sum Extraction (25% PCLS from Pot 2)</h3>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Extraction Year</label>
+                            <input type="number" id="eugeneLumpSumYear" value="2030" step="1" min="2025" max="2063">
+                        </div>
+                        <div class="input-group">
+                            <label>Percentage (%)</label>
+                            <input type="number" id="eugeneLumpSumPct" value="25" step="1" min="0" max="25">
+                        </div>
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">
+                        💡 Lump sum taken from Pot 2 only (Pot 1 already crystallised)
+                    </p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>AI's DB Pensions</h2>
+                <div class="db-section">
+                    <h3>State Pension</h3>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Start Year</label>
+                            <input type="number" id="annabelleStateYear" value="2039" step="1" min="2025" max="2063">
+                        </div>
+                        <div class="input-group">
+                            <label>Annual Amount (£)</label>
+                            <input type="number" id="annabelleStateAmount" value="12014" step="100" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="db-section">
+                    <h3>Teachers Pension</h3>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Start Year</label>
+                            <input type="number" id="annabelleTeachersYear" value="2038" step="1" min="2025" max="2063">
+                        </div>
+                        <div class="input-group">
+                            <label>Annual Amount (£)</label>
+                            <input type="number" id="annabelleTeachersAmount" value="3800" step="100" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="db-section">
+                    <h3>Lump Sum Extraction (25% PCLS)</h3>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Extraction Year</label>
+                            <input type="number" id="annabelleLumpSumYear" value="2030" step="1" min="2025" max="2063">
+                        </div>
+                        <div class="input-group">
+                            <label>Percentage (%)</label>
+                            <input type="number" id="annabelleLumpSumPct" value="25" step="1" min="0" max="25">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Optimisation Controls -->
+        <div class="grid grid-2" style="margin-top: 20px;">
+            <div class="card">
+                <h2>Depletion Age Optimisation</h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                    Set a target age for pot depletion and calculate the required gross income from the start year.
+                </p>
+                <div class="input-row" style="margin-bottom: 10px;">
+                    <div class="input-group">
+                        <label>EI Depletion Age</label>
+                        <input type="number" id="eugeneDepletionAge" value="90" step="1" min="66" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label>EI Start Year</label>
+                        <input type="number" id="eugeneDepletionStartYear" value="2030" step="1" min="2030" max="2054">
+                    </div>
+                    <button class="opt-button" id="optimizeEugene">Optimise EI</button>
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>AI Depletion Age</label>
+                        <input type="number" id="annabelleDepletionAge" value="90" step="1" min="58" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label>AI Start Year</label>
+                        <input type="number" id="annabelleDepletionStartYear" value="2030" step="1" min="2030" max="2054">
+                    </div>
+                    <button class="opt-button" id="optimizeAnnabelle">Optimise AI</button>
+                </div>
+                <div id="depletionResult" class="opt-result"></div>
+            </div>
+
+            <div class="card">
+                <h2>Tax Efficiency Optimisation</h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                    Maximise income while staying within the 20% basic rate tax band (below £50,270 threshold). No 40% higher rate tax.
+                </p>
+                <div class="input-row" style="margin-bottom: 14px;">
+                    <div class="input-group">
+                        <label>EI Start Year</label>
+                        <input type="number" id="eugeneTaxOptStartYear" value="2030" step="1" min="2030" max="2054">
+                    </div>
+                    <div class="input-group">
+                        <label>AI Start Year</label>
+                        <input type="number" id="annabelleTaxOptStartYear" value="2030" step="1" min="2030" max="2054">
+                    </div>
+                </div>
+                <div class="input-row" style="margin-bottom: 12px;">
+                    <button class="opt-button opt-button-primary" id="optimizeTaxEugene" style="flex: 1;">
+                        Maximise EI at 20%
+                    </button>
+                    <button class="opt-button opt-button-primary" id="optimizeTaxAnnabelle" style="flex: 1;">
+                        Maximise AI at 20%
+                    </button>
+                </div>
+                <div id="taxOptResult" class="opt-result"></div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div id="alertsSection" class="alerts-section" style="display: none;"></div>
+
+        <!-- Summary Cards -->
+        <h2 class="section-title">Key Outcomes</h2>
+        <div class="summary-grid" id="summaryCards"></div>
+
+        <!-- Chart -->
+        <div class="chart-container">
+            <h2>Parmenion Pension Balances Over Time</h2>
+            <canvas id="balanceChart"></canvas>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h2 style="margin: 0;">Year-by-Year Projections</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin: 4px 0 0 0;">
+                        💡 Click <strong>EI Target</strong> or <strong>AI Target</strong> to adjust income. Changes carry forward with inflation.<br>
+                        🔒 Cells are locked when pot is depleted (income limited to State + DB pensions).
+                    </p>
+                </div>
+                <button class="clear-all-overrides" id="clearAllOverrides" style="display: none;">
+                    Clear All Manual Adjustments
+                </button>
+            </div>
+            <div class="table-scroll">
+                <table id="dataTable">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            Pensions MAP &copy; 2025 – For planning purposes only. Not financial advice.
+        </footer>
+    </div>
+
+    <script>
+    /**
+     * ============================================================================
+     * PENSIONS MAP - Pension Drawdown Model
+     * ============================================================================
+     * 
+     * This application faithfully reproduces the logic from the Excel spreadsheet
+     * "Pension_Drawdown_V4.xlsx". All calculations, sequencing, and dependencies
+     * are preserved exactly as specified in the original model.
+     * 
+     * Key Calculation Order (per spreadsheet):
+     * 1. DB pensions are calculated first (State, Avon, Civil Service, Teachers)
+     * 2. Target income is determined (with optional inflation adjustment)
+     * 3. Required drawdown = Target Income - Total DB Income (if positive)
+     * 4. DC pot balance = Previous balance * (1 + growth rate) - Drawdown
+     * 5. Tax is calculated using UK bands on gross income
+     * 6. Net income = Gross income - Tax
+     * 
+     * Accumulation Phase (2025-2029):
+     * - Monthly contributions are added to DC pots
+     * - No drawdown occurs
+     * - Pot formula: ((12 * monthly_contrib) + prev_balance) * (1 + growth_rate) + (12 * monthly_contrib) + prev_balance
+     *   This simplifies to: (prev_balance + 12*contrib) * (1 + growth) + 12*contrib
+     * 
+     * Drawdown Phase (2030+):
+     * - DB pensions provide base income
+     * - Shortfall is met from Parmenion DC drawdown
+     * - Pot cannot go negative; income limited to DB if pot exhausted
+     */
+
+    // ============================================================================
+    // STATE MANAGEMENT
+    // ============================================================================
+    
+    const state = {
+        // Global parameters (from spreadsheet rows 1-5)
+        dbGrowthRate: 0.03,           // B1: Pension Annual Growth %
+        dbGrowthEnabled: true,        // Toggle for DB growth
+        dcGrowthRate: 0.06,           // B2: Pam growth Rate
+        dcGrowthEnabled: true,        // Toggle for DC growth
+        statePensionGrowthRate: 0.03, // State pension specific growth rate
+        statePensionGrowthEnabled: true, // Toggle for state pension growth
+        annualLivingCosts: 30000,     // B3: Annual Living Costs
+        livingCostsInflation: false,  // Apply inflation to living costs
+        
+        // Eugene parameters (from spreadsheet rows 7, 4, 28, 25)
+        eugeneTargetIncome: 50000,    // B7: Target Annual Gross income - Eugene
+        eugeneInflation: true,        // D7: "YES" = apply inflation
+        eugeneMonthlyContrib: 1500,   // B4: Pension Input monthly Eug
+        eugenePot1Balance: 286343,    // Pot 1: Lump sum already taken
+        eugenePot2Balance: 54239,     // Pot 2: Lump sum available
+        eugeneAge2025: 61,            // B25: Age in 2025
+        
+        // Annabelle parameters (from spreadsheet rows 8, 5, 29, 26)
+        annabelleTargetIncome: 12500, // B8: Target Annual Gross income - Annabelle
+        annabelleInflation: true,     // D8: "YES" = apply inflation
+        annabelleMonthlyContrib: 2500,// B5: Pension Input monthly Anna
+        annabelleStartingBalance: 55273, // B29: Starting Parmenion balance
+        annabelleAge2025: 53,         // B26: Age in 2025
+        
+        // Tax bands (base thresholds - frozen until new thresholds year)
+        personalAllowance: 12570,     // L2: Personal allowance threshold (base/frozen)
+        basicRateThreshold: 50270,    // M2: Basic rate upper threshold (base/frozen)
+        basicRate: 0.20,              // K2: 20% basic rate
+        higherRate: 0.40,             // K3: 40% higher rate
+        
+        // New tax thresholds from a specified year
+        taxNewThresholdsYear: 2031,   // Year from which new thresholds apply
+        taxNewPersonalAllowance: 12570,  // New PA value at taxNewThresholdsYear
+        taxNewBasicRateThreshold: 50270, // New threshold value at taxNewThresholdsYear
+        taxThresholdGrowthRate: 0.02, // Annual growth rate from taxNewThresholdsYear onwards
+        
+        // Inflation rate
+        inflationBaseRate: 0.03,      // Base inflation rate (applies before change year)
+        inflationChangeYear: 2025,    // Year from which new rate applies
+        inflationNewRate: 0.03,       // New inflation rate (applies from change year onwards)
+        
+        // Eugene's DB pensions (from spreadsheet rows 30-32)
+        eugeneStateYear: 2031,        // H30: State pension starts
+        eugeneStateAmount: 12014,     // H30: Initial state pension amount
+        eugeneAvonYear: 2030,         // G31: Avon pension starts
+        eugeneAvonAmount: 5900,       // G31: Initial Avon amount
+        eugeneCivilYear: 2030,        // G32: Civil Service starts
+        eugeneCivilAmount: 4850,      // G32: Initial CS amount
+        
+        // Annabelle's DB pensions (from spreadsheet rows 33-34)
+        annabelleStateYear: 2039,     // P33: State pension starts
+        annabelleStateAmount: 12014,  // P33: Initial state pension amount
+        annabelleTeachersYear: 2038,  // O34: Teachers pension starts
+        annabelleTeachersAmount: 3800,// O34: Initial Teachers amount
+        
+        // Eugene lump sum extraction
+        eugeneLumpSumYear: 2030,      // Year of 25% PCLS extraction
+        eugeneLumpSumPct: 0.25,       // 25% lump sum
+        
+        // Annabelle lump sum extraction (from spreadsheet row 50, B50)
+        annabelleLumpSumYear: 2030,   // Year of 25% PCLS extraction
+        annabelleLumpSumPct: 0.25,    // 25% lump sum
+        
+        // Contribution stop years (new feature)
+        eugeneContribStopYear: 2029,  // Year Eugene stops contributing
+        annabelleContribStopYear: 2029, // Year Annabelle stops contributing
+        
+        // Tax optimisation start years
+        eugeneTaxOptStartYear: 2030,
+        annabelleTaxOptStartYear: 2030,
+        
+        // Depletion optimisation start years
+        eugeneDepletionStartYear: 2030,
+        annabelleDepletionStartYear: 2030,
+        
+        // Manual income overrides: { year: { eugene: amount, annabelle: amount } }
+        // When set, this becomes the new base and inflation applies from here
+        incomeOverrides: {}
+    };
+
+    // ============================================================================
+    // CALCULATION ENGINE
+    // ============================================================================
+
+    /**
+     * Get tax thresholds for a given year
+     * Base thresholds apply until taxNewThresholdsYear
+     * From taxNewThresholdsYear onwards, new thresholds apply with annual growth
+     */
+    function getTaxThresholds(year) {
+        // Before new thresholds year - use base (frozen) values
+        if (year < state.taxNewThresholdsYear) {
+            return {
+                personalAllowance: state.personalAllowance,
+                basicRateThreshold: state.basicRateThreshold
+            };
+        }
+        
+        // From new thresholds year onwards - use new values with growth
+        const yearsOfGrowth = year - state.taxNewThresholdsYear;
+        const growthMultiplier = Math.pow(1 + state.taxThresholdGrowthRate, yearsOfGrowth);
+        
+        return {
+            personalAllowance: Math.round(state.taxNewPersonalAllowance * growthMultiplier),
+            basicRateThreshold: Math.round(state.taxNewBasicRateThreshold * growthMultiplier)
+        };
+    }
+
+    /**
+     * Calculate UK income tax based on bands
+     * Supports dynamic tax thresholds that grow after freeze period
+     * Reproduces spreadsheet formula from rows 18-19:
+     * =IF(income<=L2,0,IF(income<=M2,(income-L2)*K2,(M2-L2)*K2+(income-M2)*K3))
+     */
+    function calculateTax(grossIncome, year = 2030) {
+        // Get year-specific thresholds
+        const thresholds = getTaxThresholds(year);
+        const pa = thresholds.personalAllowance;
+        const threshold = thresholds.basicRateThreshold;
+        const basicRate = state.basicRate;
+        const higherRate = state.higherRate;
+        
+        if (grossIncome <= pa) {
+            return 0;
+        } else if (grossIncome <= threshold) {
+            return (grossIncome - pa) * basicRate;
+        } else {
+            const basicTax = (threshold - pa) * basicRate;
+            const higherTax = (grossIncome - threshold) * higherRate;
+            return basicTax + higherTax;
+        }
+    }
+
+    /**
+     * Get inflation rate for a given year
+     * Returns base rate before change year, new rate from change year onwards
+     */
+    function getInflationRate(yearIndex, year = null) {
+        // If actual year is provided, use it directly
+        if (year !== null) {
+            return year >= state.inflationChangeYear ? state.inflationNewRate : state.inflationBaseRate;
+        }
+        
+        // Legacy support using yearIndex (0 = 2030)
+        const actualYear = 2030 + yearIndex;
+        return actualYear >= state.inflationChangeYear ? state.inflationNewRate : state.inflationBaseRate;
+    }
+
+    /**
+     * Calculate DB pension amount for a given year (non-state pensions like Avon, Civil Service, Teachers)
+     * Formula: initial_amount * (1 + dbGrowthRate)^yearsSinceStart (if enabled)
+     * From spreadsheet: =G31*(1+$B$1) pattern
+     */
+    function calculateDBPension(startYear, initialAmount, currentYear) {
+        if (currentYear < startYear || initialAmount <= 0) {
+            return 0;
+        }
+        const yearsSinceStart = currentYear - startYear;
+        const growthRate = state.dbGrowthEnabled ? state.dbGrowthRate : 0;
+        return initialAmount * Math.pow(1 + growthRate, yearsSinceStart);
+    }
+
+    /**
+     * Calculate State Pension amount for a given year
+     * Uses separate state pension growth rate (may differ from other DB pensions)
+     */
+    function calculateStatePension(startYear, initialAmount, currentYear) {
+        if (currentYear < startYear || initialAmount <= 0) {
+            return 0;
+        }
+        const yearsSinceStart = currentYear - startYear;
+        const growthRate = state.statePensionGrowthEnabled ? state.statePensionGrowthRate : 0;
+        return initialAmount * Math.pow(1 + growthRate, yearsSinceStart);
+    }
+
+    /**
+     * Get effective DC growth rate (0 if disabled)
+     */
+    function getDCGrowthRate() {
+        return state.dcGrowthEnabled ? state.dcGrowthRate : 0;
+    }
+
+    /**
+     * Main calculation function - generates year-by-year data
+     * This reproduces the entire spreadsheet calculation flow
+     */
+    function calculate() {
+        const results = [];
+        const startYear = 2025;
+        const endYear = 2054;
+        const retirementYear = 2030;  // Year drawdown begins (column G in spreadsheet)
+        
+        // Initialize Parmenion balances
+        // Eugene has two pots: Pot 1 (lump sum already taken), Pot 2 (lump sum available)
+        let eugenePot1 = state.eugenePot1Balance;  // Lump sum already taken
+        let eugenePot2 = state.eugenePot2Balance;  // Lump sum available
+        let annabellePot = state.annabelleStartingBalance;
+        
+        // Track if lump sum has been taken for each person
+        let eugeneLumpSumTaken = false;
+        let eugeneLumpSumAmount = 0;
+        let eugeneLumpSumYear = null;
+        let annabelleLumpSumTaken = false;
+        let annabelleLumpSumAmount = 0;
+        let annabelleLumpSumYearActual = null;
+        
+        // Track pot exhaustion years
+        let eugeneExhaustedYear = null;
+        let annabelleExhaustedYear = null;
+        
+        // For inflation-adjusted target income tracking
+        let eugeneTargetCurrent = state.eugeneTargetIncome;
+        let annabelleTargetCurrent = state.annabelleTargetIncome;
+        
+        // For inflation-adjusted living costs tracking
+        let currentLivingCosts = state.annualLivingCosts;
+        
+        for (let year = startYear; year <= endYear; year++) {
+            const yearIndex = year - retirementYear;  // Matches row 9 in spreadsheet
+            const eugeneAge = state.eugeneAge2025 + (year - startYear);
+            const annabelleAge = state.annabelleAge2025 + (year - startYear);
+            
+            // ================================================================
+            // ACCUMULATION PHASE (2026-2029) - Columns C-F in spreadsheet
+            // Note: B28/B29 contains 2025 starting balance. Accumulation
+            // formula C28 onwards adds contributions and growth for subsequent years.
+            // ================================================================
+            if (year < retirementYear) {
+                // First year (2025) - just record starting balance, no accumulation
+                if (year === startYear) {
+                    const eugenePotCombined = eugenePot1 + eugenePot2;
+                    results.push({
+                        year,
+                        eugeneAge,
+                        annabelleAge,
+                        eugeneTargetGross: 0,
+                        annabelleTargetGross: 0,
+                        eugeneStatePension: 0,
+                        eugeneAvon: 0,
+                        eugeneCivil: 0,
+                        eugeneTotalDB: 0,
+                        annabelleStatePension: 0,
+                        annabelleTeachers: 0,
+                        annabelleTotalDB: 0,
+                        eugeneDrawdown: 0,
+                        annabelleDrawdown: 0,
+                        eugenePot: eugenePotCombined,
+                        annabellePot,
+                        eugeneGross: 0,
+                        annabelleGross: 0,
+                        totalFamilyGross: 0,
+                        eugeneTax: 0,
+                        annabelleTax: 0,
+                        eugeneNet: 0,
+                        annabelleNet: 0,
+                        totalFamilyNet: 0,
+                        livingCosts: currentLivingCosts,
+                        excessFunds: 0 - currentLivingCosts,
+                        inflationRate: 0,
+                        eugeneIncomeLimited: false,
+                        annabelleIncomeLimited: false,
+                        eugeneShortfall: 0,
+                        annabelleShortfall: 0,
+                        eugeneHasOverride: false,
+                        annabelleHasOverride: false,
+                        phase: 'accumulation'
+                    });
+                    continue;
+                }
+                
+                // Years 2026-2029: Apply accumulation formula from spreadsheet C28:
+                // =((((12*$B$4)+B28))*($B$2))+(12*$B$4)+B28
+                // Simplifies to: (prevBalance + annualContrib) * (1 + growthRate)
+                
+                // Only add contributions if before stop year
+                const eugeneAnnualContrib = (year <= state.eugeneContribStopYear) ? 12 * state.eugeneMonthlyContrib : 0;
+                const annabelleAnnualContrib = (year <= state.annabelleContribStopYear) ? 12 * state.annabelleMonthlyContrib : 0;
+                
+                // Apply the accumulation formula (growth applies even without contributions, if enabled)
+                // Both Eugene pots grow at DC rate, contributions go to Pot 2 (the active one)
+                eugenePot1 = eugenePot1 * (1 + getDCGrowthRate());
+                eugenePot2 = (eugenePot2 + eugeneAnnualContrib) * (1 + getDCGrowthRate());
+                annabellePot = (annabellePot + annabelleAnnualContrib) * (1 + getDCGrowthRate());
+                
+                const eugenePotCombined = eugenePot1 + eugenePot2;
+                
+                // Apply inflation to living costs if enabled
+                if (state.livingCostsInflation) {
+                    currentLivingCosts = currentLivingCosts * (1 + getInflationRate(null, year));
+                }
+                
+                results.push({
+                    year,
+                    eugeneAge,
+                    annabelleAge,
+                    eugeneTargetGross: 0,
+                    annabelleTargetGross: 0,
+                    eugeneStatePension: 0,
+                    eugeneAvon: 0,
+                    eugeneCivil: 0,
+                    eugeneTotalDB: 0,
+                    annabelleStatePension: 0,
+                    annabelleTeachers: 0,
+                    annabelleTotalDB: 0,
+                    eugeneDrawdown: 0,
+                    annabelleDrawdown: 0,
+                    eugenePot: eugenePotCombined,
+                    annabellePot,
+                    eugeneGross: 0,
+                    annabelleGross: 0,
+                    totalFamilyGross: 0,
+                    eugeneTax: 0,
+                    annabelleTax: 0,
+                    eugeneNet: 0,
+                    annabelleNet: 0,
+                    totalFamilyNet: 0,
+                    livingCosts: currentLivingCosts,
+                    excessFunds: 0 - currentLivingCosts,
+                    inflationRate: 0,
+                    eugeneIncomeLimited: false,
+                    annabelleIncomeLimited: false,
+                    eugeneShortfall: 0,
+                    annabelleShortfall: 0,
+                    eugeneHasOverride: false,
+                    annabelleHasOverride: false,
+                    phase: 'accumulation'
+                });
+                continue;
+            }
+            
+            // ================================================================
+            // DRAWDOWN PHASE (2030+) - Columns G+ in spreadsheet
+            // ================================================================
+            
+            const inflationRate = getInflationRate(yearIndex);
+            
+            // ----------------------------------------------------------------
+            // Step 1: Calculate target income with inflation
+            // From row 11: =IF($D$7="YES",G11*(1+G12),G11) pattern
+            // Also handles manual overrides - when set, becomes new base
+            // ----------------------------------------------------------------
+            
+            // Check for manual overrides first
+            const override = state.incomeOverrides[year];
+            
+            if (yearIndex === 0) {
+                // First drawdown year - use base target or override
+                eugeneTargetCurrent = (override && override.eugene !== undefined) 
+                    ? override.eugene 
+                    : state.eugeneTargetIncome;
+                annabelleTargetCurrent = (override && override.annabelle !== undefined) 
+                    ? override.annabelle 
+                    : state.annabelleTargetIncome;
+            } else {
+                // Apply inflation first (if enabled)
+                if (state.eugeneInflation) {
+                    const prevInflation = getInflationRate(yearIndex - 1);
+                    eugeneTargetCurrent = eugeneTargetCurrent * (1 + prevInflation);
+                }
+                if (state.annabelleInflation) {
+                    const prevInflation = getInflationRate(yearIndex - 1);
+                    annabelleTargetCurrent = annabelleTargetCurrent * (1 + prevInflation);
+                }
+                
+                // Then apply any override (this becomes the new base for subsequent years)
+                if (override && override.eugene !== undefined) {
+                    eugeneTargetCurrent = override.eugene;
+                }
+                if (override && override.annabelle !== undefined) {
+                    annabelleTargetCurrent = override.annabelle;
+                }
+            }
+            
+            // Track if this year has a manual override (for display purposes)
+            const eugeneHasOverride = override && override.eugene !== undefined;
+            const annabelleHasOverride = override && override.annabelle !== undefined;
+            
+            // ----------------------------------------------------------------
+            // Step 2: Calculate DB pensions for this year
+            // From rows 30-34 in spreadsheet
+            // State pensions use separate growth rate, other DB pensions use DB growth rate
+            // ----------------------------------------------------------------
+            const eugeneStatePension = calculateStatePension(state.eugeneStateYear, state.eugeneStateAmount, year);
+            const eugeneAvon = calculateDBPension(state.eugeneAvonYear, state.eugeneAvonAmount, year);
+            const eugeneCivil = calculateDBPension(state.eugeneCivilYear, state.eugeneCivilAmount, year);
+            const eugeneTotalDB = eugeneStatePension + eugeneAvon + eugeneCivil;
+            
+            const annabelleStatePension = calculateStatePension(state.annabelleStateYear, state.annabelleStateAmount, year);
+            const annabelleTeachers = calculateDBPension(state.annabelleTeachersYear, state.annabelleTeachersAmount, year);
+            const annabelleTotalDB = annabelleStatePension + annabelleTeachers;
+            
+            // ----------------------------------------------------------------
+            // Step 3: Calculate required drawdown
+            // From rows 21-22: =IF(G35>G11,0,G11-G35)
+            // If DB income exceeds target, no drawdown needed
+            // ----------------------------------------------------------------
+            
+            // For Annabelle, target is MAX of base target or total DB (from row 14 formula)
+            // =MAX($B$8,G37) or =MAX(IF($D$8="YES",G14*(1+G12),G14),H37)
+            let annabelleEffectiveTarget = Math.max(annabelleTargetCurrent, annabelleTotalDB);
+            
+            let eugeneIdealDrawdown = Math.max(0, eugeneTargetCurrent - eugeneTotalDB);
+            let annabelleIdealDrawdown = Math.max(0, annabelleEffectiveTarget - annabelleTotalDB);
+            
+            // ----------------------------------------------------------------
+            // Step 4: Update Parmenion pot balances
+            // From rows 28-29: =F28*(1+$B$2)-G21 pattern
+            // Pot grows by DC rate, then drawdown is subtracted
+            // Eugene has two pots - Pot 1 (lump sum already taken), Pot 2 (lump sum available)
+            // ----------------------------------------------------------------
+            
+            // Grow both Eugene pots by DC growth rate first (if enabled)
+            let eugenePot1BeforeDrawdown = eugenePot1 * (1 + getDCGrowthRate());
+            let eugenePot2BeforeDrawdown = eugenePot2 * (1 + getDCGrowthRate());
+            let annabellePotBeforeDrawdown = annabellePot * (1 + getDCGrowthRate());
+            
+            // Handle Eugene's lump sum extraction from Pot 2 only in specified year
+            if (!eugeneLumpSumTaken && year === state.eugeneLumpSumYear && state.eugeneLumpSumPct > 0) {
+                eugeneLumpSumAmount = eugenePot2BeforeDrawdown * state.eugeneLumpSumPct;
+                eugenePot2BeforeDrawdown -= eugeneLumpSumAmount;
+                eugeneLumpSumTaken = true;
+                eugeneLumpSumYear = year;
+            }
+            
+            // Handle Annabelle's lump sum extraction in specified year
+            if (!annabelleLumpSumTaken && year === state.annabelleLumpSumYear && state.annabelleLumpSumPct > 0) {
+                annabelleLumpSumAmount = annabellePotBeforeDrawdown * state.annabelleLumpSumPct;
+                annabellePotBeforeDrawdown -= annabelleLumpSumAmount;
+                annabelleLumpSumTaken = true;
+                annabelleLumpSumYearActual = year;
+            }
+            
+            // Combine Eugene's pots for drawdown calculation
+            let eugenePotCombinedBeforeDrawdown = eugenePot1BeforeDrawdown + eugenePot2BeforeDrawdown;
+            
+            // Cap drawdown at available pot balance (pot cannot go negative)
+            // Track if drawdown is limited by pot exhaustion
+            let eugeneDrawdown = Math.min(eugeneIdealDrawdown, Math.max(0, eugenePotCombinedBeforeDrawdown));
+            let annabelleDrawdown = Math.min(annabelleIdealDrawdown, Math.max(0, annabellePotBeforeDrawdown));
+            
+            // Flag if income is limited due to pot exhaustion
+            const eugeneIncomeLimited = eugeneDrawdown < eugeneIdealDrawdown;
+            const annabelleIncomeLimited = annabelleDrawdown < annabelleIdealDrawdown;
+            
+            // Track first exhaustion year
+            if (eugeneIncomeLimited && !eugeneExhaustedYear) {
+                eugeneExhaustedYear = year;
+            }
+            if (annabelleIncomeLimited && !annabelleExhaustedYear) {
+                annabelleExhaustedYear = year;
+            }
+            
+            // Calculate new pot balances after drawdown
+            // Drawdown comes proportionally from both pots based on their relative sizes
+            if (eugeneDrawdown > 0 && eugenePotCombinedBeforeDrawdown > 0) {
+                const pot1Ratio = eugenePot1BeforeDrawdown / eugenePotCombinedBeforeDrawdown;
+                const pot2Ratio = eugenePot2BeforeDrawdown / eugenePotCombinedBeforeDrawdown;
+                eugenePot1 = Math.max(0, eugenePot1BeforeDrawdown - (eugeneDrawdown * pot1Ratio));
+                eugenePot2 = Math.max(0, eugenePot2BeforeDrawdown - (eugeneDrawdown * pot2Ratio));
+            } else {
+                eugenePot1 = Math.max(0, eugenePot1BeforeDrawdown);
+                eugenePot2 = Math.max(0, eugenePot2BeforeDrawdown);
+            }
+            annabellePot = Math.max(0, annabellePotBeforeDrawdown - annabelleDrawdown);
+            
+            // Combined pot for display
+            const eugenePotCombined = eugenePot1 + eugenePot2;
+            
+            // ----------------------------------------------------------------
+            // Step 5: Calculate actual gross income received
+            // Gross = DB income + Drawdown (limited by pot availability)
+            // When pot is exhausted, income is limited to DB only
+            // ----------------------------------------------------------------
+            const eugeneGross = eugeneTotalDB + eugeneDrawdown;
+            const annabelleGross = annabelleTotalDB + annabelleDrawdown;
+            const totalFamilyGross = eugeneGross + annabelleGross;
+            
+            // Calculate shortfall (how much less than target due to pot exhaustion)
+            const eugeneShortfall = eugeneIncomeLimited ? (eugeneTargetCurrent - eugeneGross) : 0;
+            const annabelleShortfall = annabelleIncomeLimited ? (annabelleEffectiveTarget - annabelleGross) : 0;
+            
+            // ----------------------------------------------------------------
+            // Step 6: Calculate tax on gross income
+            // From rows 18-19 using UK tax bands (year-specific)
+            // ----------------------------------------------------------------
+            const eugeneTax = calculateTax(eugeneGross, year);
+            const annabelleTax = calculateTax(annabelleGross, year);
+            
+            // ----------------------------------------------------------------
+            // Step 7: Calculate net income
+            // From row 20: =(G11-G18)+(G14-G19)
+            // ----------------------------------------------------------------
+            const eugeneNet = eugeneGross - eugeneTax;
+            const annabelleNet = annabelleGross - annabelleTax;
+            const totalFamilyNet = eugeneNet + annabelleNet;
+            
+            // ----------------------------------------------------------------
+            // Step 8: Apply inflation to living costs if enabled
+            // ----------------------------------------------------------------
+            if (yearIndex > 0 && state.livingCostsInflation) {
+                currentLivingCosts = currentLivingCosts * (1 + inflationRate);
+            }
+            
+            // Calculate excess funds (family net income - living costs)
+            const excessFunds = totalFamilyNet - currentLivingCosts;
+            
+            results.push({
+                year,
+                eugeneAge,
+                annabelleAge,
+                eugeneTargetGross: eugeneTargetCurrent,
+                annabelleTargetGross: annabelleEffectiveTarget,
+                eugeneStatePension,
+                eugeneAvon,
+                eugeneCivil,
+                eugeneTotalDB,
+                annabelleStatePension,
+                annabelleTeachers,
+                annabelleTotalDB,
+                eugeneDrawdown,
+                annabelleDrawdown,
+                eugenePot: eugenePotCombined,
+                annabellePot,
+                eugeneGross,
+                annabelleGross,
+                totalFamilyGross,
+                eugeneTax,
+                annabelleTax,
+                eugeneNet,
+                annabelleNet,
+                totalFamilyNet,
+                livingCosts: currentLivingCosts,
+                excessFunds,
+                inflationRate,
+                eugeneLumpSumExtracted: (year === state.eugeneLumpSumYear && eugeneLumpSumAmount > 0) ? eugeneLumpSumAmount : 0,
+                annabelleLumpSumExtracted: (year === state.annabelleLumpSumYear && annabelleLumpSumAmount > 0) ? annabelleLumpSumAmount : 0,
+                eugeneIncomeLimited,
+                annabelleIncomeLimited,
+                eugeneShortfall,
+                annabelleShortfall,
+                eugeneHasOverride,
+                annabelleHasOverride,
+                phase: 'drawdown'
+            });
+        }
+        
+        // Add lump sum info to return value
+        const lumpSumInfo = {
+            eugeneLumpSumYear: eugeneLumpSumYear,
+            eugeneLumpSumAmount: eugeneLumpSumAmount,
+            annabelleLumpSumYear: annabelleLumpSumYearActual,
+            annabelleLumpSumAmount: annabelleLumpSumAmount
+        };
+        
+        return { results, lumpSumInfo };
+    }
+
+    // ============================================================================
+    // CHART RENDERING (Using Canvas API - no external libraries)
+    // ============================================================================
+
+    function drawChart(data) {
+        const canvas = document.getElementById('balanceChart');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size for high DPI displays
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = 300 * dpr;
+        ctx.scale(dpr, dpr);
+        
+        const width = rect.width;
+        const height = 300;
+        const padding = { top: 30, right: 120, bottom: 50, left: 80 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Filter to drawdown phase only for cleaner visualization
+        const drawdownData = data.filter(d => d.phase === 'drawdown' || d.year >= 2029);
+        
+        if (drawdownData.length === 0) return;
+        
+        // Find max value for scale
+        const maxValue = Math.max(
+            ...drawdownData.map(d => Math.max(d.eugenePot, d.annabellePot))
+        );
+        const yScale = chartHeight / (maxValue * 1.1);
+        const xStep = chartWidth / (drawdownData.length - 1);
+        
+        // Draw grid lines
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 5; i++) {
+            const y = padding.top + (chartHeight / 5) * i;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(width - padding.right, y);
+            ctx.stroke();
+            
+            // Y-axis labels
+            const value = maxValue * 1.1 * (1 - i / 5);
+            ctx.fillStyle = '#718096';
+            ctx.font = '11px -apple-system, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('£' + Math.round(value / 1000) + 'k', padding.left - 10, y + 4);
+        }
+        
+        // Draw Eugene's line
+        ctx.strokeStyle = '#2c5282';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        drawdownData.forEach((d, i) => {
+            const x = padding.left + i * xStep;
+            const y = padding.top + chartHeight - (Math.max(0, d.eugenePot) * yScale);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        
+        // Draw Annabelle's line
+        ctx.strokeStyle = '#38a169';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        drawdownData.forEach((d, i) => {
+            const x = padding.left + i * xStep;
+            const y = padding.top + chartHeight - (Math.max(0, d.annabellePot) * yScale);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        
+        // Draw zero line
+        ctx.strokeStyle = '#e53e3e';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, padding.top + chartHeight);
+        ctx.lineTo(width - padding.right, padding.top + chartHeight);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // X-axis labels (every 5 years)
+        ctx.fillStyle = '#718096';
+        ctx.font = '11px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        drawdownData.forEach((d, i) => {
+            if (i % 5 === 0 || i === drawdownData.length - 1) {
+                const x = padding.left + i * xStep;
+                ctx.fillText(d.year.toString(), x, height - padding.bottom + 20);
+            }
+        });
+        
+        // Legend
+        ctx.font = '12px -apple-system, sans-serif';
+        ctx.fillStyle = '#2c5282';
+        ctx.fillRect(width - 105, padding.top, 12, 12);
+        ctx.fillText('EI', width - 88, padding.top + 10);
+        
+        ctx.fillStyle = '#38a169';
+        ctx.fillRect(width - 105, padding.top + 20, 12, 12);
+        ctx.fillText('AI', width - 88, padding.top + 30);
+    }
+
+    // ============================================================================
+    // TABLE RENDERING
+    // ============================================================================
+
+    function renderTable(data) {
+        const thead = document.querySelector('#dataTable thead');
+        const tbody = document.querySelector('#dataTable tbody');
+        
+        // Check if any overrides exist
+        const hasOverrides = Object.keys(state.incomeOverrides).length > 0;
+        
+        thead.innerHTML = `
+            <tr class="header-group">
+                <th rowspan="2">Year</th>
+                <th rowspan="2">Infl %</th>
+                <th colspan="9" style="background: #2c5282; color: white;">EI</th>
+                <th colspan="9" style="background: #276749; color: white;">AI</th>
+                <th colspan="3" style="background: #744210; color: white;">Family</th>
+                <th rowspan="2">Status</th>
+            </tr>
+            <tr>
+                <th>Age</th>
+                <th>Target 💡</th>
+                <th>State</th>
+                <th>DB</th>
+                <th>Drawdown</th>
+                <th>Parmenion</th>
+                <th>Gross</th>
+                <th>Tax</th>
+                <th>Net</th>
+                <th>Age</th>
+                <th>Target 💡</th>
+                <th>State</th>
+                <th>DB</th>
+                <th>Drawdown</th>
+                <th>Parmenion</th>
+                <th>Gross</th>
+                <th>Tax</th>
+                <th>Net</th>
+                <th>Gross</th>
+                <th>Net</th>
+                <th>Excess</th>
+            </tr>
+        `;
+        
+        const fmt = (n) => n < 0 
+            ? `<span class="negative">-£${Math.abs(n).toLocaleString('en-GB', {maximumFractionDigits: 0})}</span>`
+            : `£${n.toLocaleString('en-GB', {maximumFractionDigits: 0})}`;
+        
+        tbody.innerHTML = data.map(row => {
+            const eugPotExhausted = row.eugenePot <= 0 && row.phase === 'drawdown';
+            const annPotExhausted = row.annabellePot <= 0 && row.phase === 'drawdown';
+            const eugIncomeLimited = row.eugeneIncomeLimited;
+            const annIncomeLimited = row.annabelleIncomeLimited;
+            
+            let rowClass = '';
+            if (eugIncomeLimited || annIncomeLimited) {
+                rowClass = 'income-limited';
+            } else if (row.phase === 'accumulation') {
+                rowClass = 'highlight';
+            }
+            
+            // Build status indicator
+            let status = '';
+            if (row.phase === 'accumulation') {
+                status = '<span style="color: #38a169;">Accumulating</span>';
+            } else if (eugIncomeLimited && annIncomeLimited) {
+                status = '<span style="color: #c53030;">⚠️ Both State+DB only</span>';
+            } else if (eugIncomeLimited) {
+                status = '<span style="color: #dd6b20;">⚠️ EI State+DB only</span>';
+            } else if (annIncomeLimited) {
+                status = '<span style="color: #dd6b20;">⚠️ AI State+DB only</span>';
+            } else {
+                status = '<span style="color: #718096;">Drawing</span>';
+            }
+            
+            // Editable target cells (only for drawdown phase, locked when pot depleted)
+            let eugTargetCell, annTargetCell;
+            if (row.phase === 'drawdown') {
+                // Eugene's target cell
+                if (eugIncomeLimited) {
+                    // Pot depleted - show total DB income (State + other DB), locked (not editable)
+                    eugTargetCell = `<td class="locked-cell" title="Pot depleted - income limited to State + DB pensions (£${Math.round(row.eugeneTotalDB).toLocaleString()})">${fmt(row.eugeneTotalDB)} 🔒</td>`;
+                } else {
+                    const eugOverrideClass = row.eugeneHasOverride ? 'has-override' : '';
+                    eugTargetCell = `<td class="editable-cell ${eugOverrideClass}" data-year="${row.year}" data-person="eugene" data-value="${Math.round(row.eugeneTargetGross)}">${fmt(row.eugeneTargetGross)}</td>`;
+                }
+                
+                // Annabelle's target cell
+                if (annIncomeLimited) {
+                    // Pot depleted - show total DB income (State + other DB), locked (not editable)
+                    annTargetCell = `<td class="locked-cell" title="Pot depleted - income limited to State + DB pensions (£${Math.round(row.annabelleTotalDB).toLocaleString()})">${fmt(row.annabelleTotalDB)} 🔒</td>`;
+                } else {
+                    const annOverrideClass = row.annabelleHasOverride ? 'has-override' : '';
+                    annTargetCell = `<td class="editable-cell ${annOverrideClass}" data-year="${row.year}" data-person="annabelle" data-value="${Math.round(row.annabelleTargetGross)}">${fmt(row.annabelleTargetGross)}</td>`;
+                }
+            } else {
+                eugTargetCell = `<td>-</td>`;
+                annTargetCell = `<td>-</td>`;
+            }
+            
+            const excessClass = row.excessFunds < 0 ? 'negative' : (row.excessFunds > 0 ? 'positive' : '');
+            
+            // Calculate non-state DB pensions for display
+            const eugeneOtherDB = row.eugeneAvon + row.eugeneCivil;
+            const annabelleOtherDB = row.annabelleTeachers;
+            
+            // Get inflation rate for this year
+            const yearInflationRate = getInflationRate(null, row.year);
+            const inflDisplay = (yearInflationRate * 100).toFixed(1) + '%';
+            
+            return `
+                <tr class="${rowClass}">
+                    <td>${row.year}</td>
+                    <td>${inflDisplay}</td>
+                    <td>${row.eugeneAge}</td>
+                    ${eugTargetCell}
+                    <td>${row.eugeneStatePension > 0 ? fmt(row.eugeneStatePension) : '-'}</td>
+                    <td>${eugeneOtherDB > 0 ? fmt(eugeneOtherDB) : '-'}</td>
+                    <td>${fmt(row.eugeneDrawdown)}${eugIncomeLimited ? ' ⚠️' : ''}</td>
+                    <td class="${eugPotExhausted ? 'negative' : ''}">${fmt(row.eugenePot)}</td>
+                    <td>${fmt(row.eugeneGross)}${eugIncomeLimited ? ' <span style="color:#c53030;">(S+DB)</span>' : ''}</td>
+                    <td>${fmt(row.eugeneTax)}</td>
+                    <td>${fmt(row.eugeneNet)}</td>
+                    <td>${row.annabelleAge}</td>
+                    ${annTargetCell}
+                    <td>${row.annabelleStatePension > 0 ? fmt(row.annabelleStatePension) : '-'}</td>
+                    <td>${annabelleOtherDB > 0 ? fmt(annabelleOtherDB) : '-'}</td>
+                    <td>${fmt(row.annabelleDrawdown)}${annIncomeLimited ? ' ⚠️' : ''}</td>
+                    <td class="${annPotExhausted ? 'negative' : ''}">${fmt(row.annabellePot)}</td>
+                    <td>${fmt(row.annabelleGross)}${annIncomeLimited ? ' <span style="color:#c53030;">(S+DB)</span>' : ''}</td>
+                    <td>${fmt(row.annabelleTax)}</td>
+                    <td>${fmt(row.annabelleNet)}</td>
+                    <td>${fmt(row.totalFamilyGross)}</td>
+                    <td>${fmt(row.totalFamilyNet)}</td>
+                    <td class="${excessClass}">${fmt(row.excessFunds)}</td>
+                    <td>${status}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        // Add click handlers for editable cells
+        tbody.querySelectorAll('.editable-cell').forEach(cell => {
+            cell.addEventListener('click', handleCellClick);
+        });
+        
+        // Show/hide clear all button
+        const clearBtn = document.getElementById('clearAllOverrides');
+        if (clearBtn) {
+            clearBtn.style.display = hasOverrides ? 'inline-block' : 'none';
+        }
+    }
+    
+    function handleCellClick(e) {
+        const cell = e.currentTarget;
+        if (cell.querySelector('input')) return; // Already editing
+        
+        const year = parseInt(cell.dataset.year);
+        const person = cell.dataset.person;
+        const currentValue = parseInt(cell.dataset.value);
+        
+        // Create input field
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = currentValue;
+        input.step = 100;
+        input.min = 0;
+        
+        // Clear cell and add input
+        cell.innerHTML = '';
+        cell.appendChild(input);
+        input.focus();
+        input.select();
+        
+        // Handle blur and enter
+        const saveValue = () => {
+            const newValue = parseInt(input.value);
+            if (!isNaN(newValue) && newValue >= 0) {
+                setIncomeOverride(year, person, newValue);
+            }
+        };
+        
+        input.addEventListener('blur', saveValue);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                saveValue();
+            } else if (e.key === 'Escape') {
+                update(); // Just refresh without saving
+            }
+        });
+    }
+    
+    function setIncomeOverride(year, person, value) {
+        if (!state.incomeOverrides[year]) {
+            state.incomeOverrides[year] = {};
+        }
+        state.incomeOverrides[year][person] = value;
+        update();
+    }
+    
+    function clearIncomeOverride(year, person) {
+        if (state.incomeOverrides[year]) {
+            delete state.incomeOverrides[year][person];
+            if (Object.keys(state.incomeOverrides[year]).length === 0) {
+                delete state.incomeOverrides[year];
+            }
+        }
+        update();
+    }
+    
+    function clearAllOverrides() {
+        state.incomeOverrides = {};
+        update();
+    }
+
+    // ============================================================================
+    // SUMMARY CARDS
+    // ============================================================================
+
+    function renderSummary(data, lumpSumInfo) {
+        const container = document.getElementById('summaryCards');
+        const alertsSection = document.getElementById('alertsSection');
+        
+        // Find exhaustion years (first year where income is limited)
+        const eugeneExhaustion = data.find(d => d.eugeneIncomeLimited && d.phase === 'drawdown');
+        const annabelleExhaustion = data.find(d => d.annabelleIncomeLimited && d.phase === 'drawdown');
+        
+        // Count years with limited income
+        const eugeneLimitedYears = data.filter(d => d.eugeneIncomeLimited).length;
+        const annabelleLimitedYears = data.filter(d => d.annabelleIncomeLimited).length;
+        
+        // Calculate total shortfall
+        const eugeneTotalShortfall = data.reduce((sum, d) => sum + (d.eugeneShortfall || 0), 0);
+        const annabelleTotalShortfall = data.reduce((sum, d) => sum + (d.annabelleShortfall || 0), 0);
+        
+        // Calculate totals
+        const drawdownData = data.filter(d => d.phase === 'drawdown');
+        const totalNetIncome = drawdownData.reduce((sum, d) => sum + d.totalFamilyNet, 0);
+        const avgNetIncome = totalNetIncome / drawdownData.length;
+        
+        // Calculate total family excess (sum of all excess funds during drawdown)
+        const totalFamilyExcess = drawdownData.reduce((sum, d) => sum + d.excessFunds, 0);
+        
+        // Final balances
+        const finalData = data[data.length - 1];
+        
+        // Peak balances
+        const peakEugene = Math.max(...data.map(d => d.eugenePot));
+        const peakAnnabelle = Math.max(...data.map(d => d.annabellePot));
+        
+        const fmt = (n) => '£' + Math.round(n).toLocaleString('en-GB');
+        
+        // Format lump sum display
+        const eiLumpSum = lumpSumInfo && lumpSumInfo.eugeneLumpSumAmount > 0 
+            ? `${fmt(lumpSumInfo.eugeneLumpSumAmount)} (${lumpSumInfo.eugeneLumpSumYear})` 
+            : 'Not taken';
+        const aiLumpSum = lumpSumInfo && lumpSumInfo.annabelleLumpSumAmount > 0 
+            ? `${fmt(lumpSumInfo.annabelleLumpSumAmount)} (${lumpSumInfo.annabelleLumpSumYear})` 
+            : 'Not taken';
+        
+        // Render alerts
+        let alertsHTML = '';
+        
+        if (eugeneExhaustion) {
+            alertsHTML += `
+                <div class="alert-box">
+                    <h3>⚠️ EI's Parmenion Pot Exhausted</h3>
+                    <p>
+                        EI's Parmenion pension pot is depleted in <strong>${eugeneExhaustion.year}</strong> (age ${eugeneExhaustion.eugeneAge}).
+                        From this year onwards, EI's income is limited to State + DB pensions only and target income is locked. 🔒
+                    </p>
+                    <div class="detail">
+                        <strong>Income after exhaustion:</strong> £${Math.round(eugeneExhaustion.eugeneTotalDB).toLocaleString()} (State + DB)<br>
+                        <strong>Target was:</strong> £${Math.round(eugeneExhaustion.eugeneTargetGross).toLocaleString()}<br>
+                        <strong>Annual shortfall:</strong> £${Math.round(eugeneExhaustion.eugeneShortfall).toLocaleString()}<br>
+                        <strong>Years affected:</strong> ${eugeneLimitedYears} years<br>
+                        <strong>Total income shortfall:</strong> £${Math.round(eugeneTotalShortfall).toLocaleString()}
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (annabelleExhaustion) {
+            alertsHTML += `
+                <div class="alert-box">
+                    <h3>⚠️ AI's Parmenion Pot Exhausted</h3>
+                    <p>
+                        AI's Parmenion pension pot is depleted in <strong>${annabelleExhaustion.year}</strong> (age ${annabelleExhaustion.annabelleAge}).
+                        From this year onwards, AI's income is limited to State + DB pensions only and target income is locked. 🔒
+                    </p>
+                    <div class="detail">
+                        <strong>Income after exhaustion:</strong> £${Math.round(annabelleExhaustion.annabelleTotalDB).toLocaleString()} (State + DB)<br>
+                        <strong>Target was:</strong> £${Math.round(annabelleExhaustion.annabelleTargetGross).toLocaleString()}<br>
+                        <strong>Annual shortfall:</strong> £${Math.round(annabelleExhaustion.annabelleShortfall).toLocaleString()}<br>
+                        <strong>Years affected:</strong> ${annabelleLimitedYears} years<br>
+                        <strong>Total income shortfall:</strong> £${Math.round(annabelleTotalShortfall).toLocaleString()}
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (alertsHTML) {
+            alertsSection.innerHTML = `<h2 class="section-title" style="color: #c53030;">⚠️ Income Alerts</h2>` + alertsHTML;
+            alertsSection.style.display = 'block';
+        } else {
+            alertsSection.style.display = 'none';
+        }
+        
+        // Render summary cards
+        container.innerHTML = `
+            <div class="summary-card ${eugeneExhaustion ? 'danger' : 'success'}">
+                <div class="value">${eugeneExhaustion ? eugeneExhaustion.year + ' (Age ' + eugeneExhaustion.eugeneAge + ')' : 'Never'}</div>
+                <div class="label">EI Pot Exhaustion</div>
+            </div>
+            <div class="summary-card ${annabelleExhaustion ? 'danger' : 'success'}">
+                <div class="value">${annabelleExhaustion ? annabelleExhaustion.year + ' (Age ' + annabelleExhaustion.annabelleAge + ')' : 'Never'}</div>
+                <div class="label">AI Pot Exhaustion</div>
+            </div>
+            <div class="summary-card ${totalFamilyExcess < 0 ? 'danger' : 'success'}">
+                <div class="value">${fmt(totalFamilyExcess)}</div>
+                <div class="label">Total Net Family Excess</div>
+            </div>
+            <div class="summary-card">
+                <div class="value">${eiLumpSum}</div>
+                <div class="label">EI 25% Lump Sum (Pot 2)</div>
+            </div>
+            <div class="summary-card">
+                <div class="value">${aiLumpSum}</div>
+                <div class="label">AI 25% Tax-Free Lump Sum</div>
+            </div>
+        `;
+    }
+
+    // ============================================================================
+    // INPUT BINDING & UPDATE LOOP
+    // ============================================================================
+
+    function bindInputs() {
+        const bindings = [
+            // Global
+            { id: 'dbGrowthRate', key: 'dbGrowthRate', transform: v => v / 100 },
+            { id: 'dbGrowthEnabled', key: 'dbGrowthEnabled', isCheckbox: true },
+            { id: 'dcGrowthRate', key: 'dcGrowthRate', transform: v => v / 100 },
+            { id: 'dcGrowthEnabled', key: 'dcGrowthEnabled', isCheckbox: true },
+            { id: 'statePensionGrowthRate', key: 'statePensionGrowthRate', transform: v => v / 100 },
+            { id: 'statePensionGrowthEnabled', key: 'statePensionGrowthEnabled', isCheckbox: true },
+            { id: 'annualLivingCosts', key: 'annualLivingCosts' },
+            { id: 'livingCostsInflation', key: 'livingCostsInflation', isCheckbox: true },
+            
+            // Eugene
+            { id: 'eugeneTargetIncome', key: 'eugeneTargetIncome' },
+            { id: 'eugeneInflation', key: 'eugeneInflation', isCheckbox: true },
+            { id: 'eugeneMonthlyContrib', key: 'eugeneMonthlyContrib' },
+            { id: 'eugenePot1Balance', key: 'eugenePot1Balance' },
+            { id: 'eugenePot2Balance', key: 'eugenePot2Balance' },
+            { id: 'eugeneAge2025', key: 'eugeneAge2025' },
+            
+            // Annabelle
+            { id: 'annabelleTargetIncome', key: 'annabelleTargetIncome' },
+            { id: 'annabelleInflation', key: 'annabelleInflation', isCheckbox: true },
+            { id: 'annabelleMonthlyContrib', key: 'annabelleMonthlyContrib' },
+            { id: 'annabelleStartingBalance', key: 'annabelleStartingBalance' },
+            { id: 'annabelleAge2025', key: 'annabelleAge2025' },
+            
+            // Tax
+            { id: 'personalAllowance', key: 'personalAllowance' },
+            { id: 'basicRateThreshold', key: 'basicRateThreshold' },
+            { id: 'basicRate', key: 'basicRate', transform: v => v / 100 },
+            { id: 'higherRate', key: 'higherRate', transform: v => v / 100 },
+            { id: 'taxNewThresholdsYear', key: 'taxNewThresholdsYear' },
+            { id: 'taxNewPersonalAllowance', key: 'taxNewPersonalAllowance' },
+            { id: 'taxNewBasicRateThreshold', key: 'taxNewBasicRateThreshold' },
+            
+            // Inflation
+            { id: 'inflationBaseRate', key: 'inflationBaseRate', transform: v => v / 100 },
+            { id: 'inflationChangeYear', key: 'inflationChangeYear' },
+            { id: 'inflationNewRate', key: 'inflationNewRate', transform: v => v / 100 },
+            
+            // Eugene DB
+            { id: 'eugeneStateYear', key: 'eugeneStateYear' },
+            { id: 'eugeneStateAmount', key: 'eugeneStateAmount' },
+            { id: 'eugeneAvonYear', key: 'eugeneAvonYear' },
+            { id: 'eugeneAvonAmount', key: 'eugeneAvonAmount' },
+            { id: 'eugeneCivilYear', key: 'eugeneCivilYear' },
+            { id: 'eugeneCivilAmount', key: 'eugeneCivilAmount' },
+            
+            // Annabelle DB
+            { id: 'annabelleStateYear', key: 'annabelleStateYear' },
+            { id: 'annabelleStateAmount', key: 'annabelleStateAmount' },
+            { id: 'annabelleTeachersYear', key: 'annabelleTeachersYear' },
+            { id: 'annabelleTeachersAmount', key: 'annabelleTeachersAmount' },
+            
+            // Lump sum
+            { id: 'eugeneLumpSumYear', key: 'eugeneLumpSumYear' },
+            { id: 'eugeneLumpSumPct', key: 'eugeneLumpSumPct', transform: v => v / 100 },
+            { id: 'annabelleLumpSumYear', key: 'annabelleLumpSumYear' },
+            { id: 'annabelleLumpSumPct', key: 'annabelleLumpSumPct', transform: v => v / 100 },
+            
+            // Contribution stop years
+            { id: 'eugeneContribStopYear', key: 'eugeneContribStopYear' },
+            { id: 'annabelleContribStopYear', key: 'annabelleContribStopYear' }
+        ];
+        
+        bindings.forEach(({ id, key, transform, isCheckbox }) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            
+            el.addEventListener(isCheckbox ? 'change' : 'input', () => {
+                if (isCheckbox) {
+                    state[key] = el.checked;
+                } else {
+                    const val = parseFloat(el.value) || 0;
+                    state[key] = transform ? transform(val) : val;
+                }
+                update();
+            });
+        });
+    }
+
+    function update() {
+        const { results: data, lumpSumInfo } = calculate();
+        renderSummary(data, lumpSumInfo);
+        drawChart(data);
+        renderTable(data);
+    }
+
+    // ============================================================================
+    // OPTIMISATION FUNCTIONS
+    // ============================================================================
+
+    /**
+     * Simulate pot and return both final balance and exhaustion year
+     * incomeStartYear: year from which the new target income applies (default 2030)
+     * Before incomeStartYear, uses the existing state target income
+     */
+    function simulatePotWithExhaustion(person, targetIncome, targetYear, incomeStartYear = 2030) {
+        const startYear = 2025;
+        const retirementYear = 2030;
+        
+        // For Eugene, use combined pot; for Annabelle, use single pot
+        let pot = (person === 'eugene') 
+            ? (state.eugenePot1Balance + state.eugenePot2Balance) 
+            : state.annabelleStartingBalance;
+        const monthlyContrib = (person === 'eugene') ? state.eugeneMonthlyContrib : state.annabelleMonthlyContrib;
+        const contribStopYear = (person === 'eugene') ? state.eugeneContribStopYear : state.annabelleContribStopYear;
+        const applyInflation = (person === 'eugene') ? state.eugeneInflation : state.annabelleInflation;
+        const originalTarget = (person === 'eugene') ? state.eugeneTargetIncome : state.annabelleTargetIncome;
+        
+        // Track two target incomes: original (until incomeStartYear) and new (from incomeStartYear)
+        let originalTargetCurrent = originalTarget;
+        let newTargetCurrent = targetIncome;
+        let lumpSumTaken = false;
+        let exhaustionYear = null;
+        
+        for (let year = startYear; year <= targetYear; year++) {
+            const yearIndex = year - retirementYear;
+            
+            if (year < retirementYear) {
+                if (year === startYear) continue;
+                const annualContrib = (year <= contribStopYear) ? 12 * monthlyContrib : 0;
+                pot = (pot + annualContrib) * (1 + state.dcGrowthRate);
+                continue;
+            }
+            
+            // Apply inflation to both targets
+            if (yearIndex > 0 && applyInflation) {
+                const prevInflation = getInflationRate(yearIndex - 1);
+                originalTargetCurrent = originalTargetCurrent * (1 + prevInflation);
+                newTargetCurrent = newTargetCurrent * (1 + prevInflation);
+            }
+            
+            // Use original target before incomeStartYear, new target from incomeStartYear onwards
+            let currentTarget;
+            if (year < incomeStartYear) {
+                currentTarget = originalTargetCurrent;
+            } else if (year === incomeStartYear) {
+                // Reset to the new target at start year
+                currentTarget = targetIncome;
+                newTargetCurrent = targetIncome;
+            } else {
+                currentTarget = newTargetCurrent;
+            }
+            
+            let dbIncome;
+            if (person === 'eugene') {
+                dbIncome = calculateStatePension(state.eugeneStateYear, state.eugeneStateAmount, year) +
+                          calculateDBPension(state.eugeneAvonYear, state.eugeneAvonAmount, year) +
+                          calculateDBPension(state.eugeneCivilYear, state.eugeneCivilAmount, year);
+            } else {
+                dbIncome = calculateStatePension(state.annabelleStateYear, state.annabelleStateAmount, year) +
+                          calculateDBPension(state.annabelleTeachersYear, state.annabelleTeachersAmount, year);
+            }
+            
+            const effectiveTarget = (person === 'annabelle') ? Math.max(currentTarget, dbIncome) : currentTarget;
+            
+            let potBeforeDrawdown = pot * (1 + getDCGrowthRate());
+            
+            // Handle Eugene's lump sum from Pot 2 only
+            // For simulation, we need to calculate what portion of the pot is Pot 2 at this point
+            // Simplified: take the lump sum as a proportion of the original pot 2 ratio
+            if (person === 'eugene' && !lumpSumTaken && year === state.eugeneLumpSumYear && state.eugeneLumpSumPct > 0) {
+                // Calculate the approximate Pot 2 portion (it grows at the same rate as Pot 1)
+                const originalPot2Ratio = state.eugenePot2Balance / (state.eugenePot1Balance + state.eugenePot2Balance);
+                const pot2Portion = potBeforeDrawdown * originalPot2Ratio;
+                const lumpSumAmount = pot2Portion * state.eugeneLumpSumPct;
+                potBeforeDrawdown -= lumpSumAmount;
+                lumpSumTaken = true;
+            }
+            
+            if (person === 'annabelle' && !lumpSumTaken && year === state.annabelleLumpSumYear && state.annabelleLumpSumPct > 0) {
+                potBeforeDrawdown -= potBeforeDrawdown * state.annabelleLumpSumPct;
+                lumpSumTaken = true;
+            }
+            
+            let idealDrawdown = Math.max(0, effectiveTarget - dbIncome);
+            let actualDrawdown = Math.min(idealDrawdown, Math.max(0, potBeforeDrawdown));
+            pot = Math.max(0, potBeforeDrawdown - actualDrawdown);
+            
+            // Track when pot exhausts (can't meet full drawdown requirement)
+            if (pot <= 0 && actualDrawdown < idealDrawdown && !exhaustionYear) {
+                exhaustionYear = year;
+            }
+        }
+        
+        return { pot, exhaustionYear };
+    }
+
+    /**
+     * Find the target income that depletes pot at exactly the target age
+     * Uses binary search for efficiency
+     * incomeStartYear: year from which the optimised income applies
+     */
+    function optimizeForDepletionAge(person, targetAge, incomeStartYear = 2030) {
+        const startAge = (person === 'eugene') ? state.eugeneAge2025 : state.annabelleAge2025;
+        const targetYear = 2025 + (targetAge - startAge);
+        
+        if (targetYear < 2030 || targetYear > 2054) {
+            return { success: false, message: 'Target age must result in a year between 2030 and 2054' };
+        }
+        
+        if (incomeStartYear > targetYear) {
+            return { success: false, message: `Start year (${incomeStartYear}) must be before or equal to target year (${targetYear})` };
+        }
+        
+        // Binary search for the income that exhausts pot at target year
+        let low = 1000;
+        let high = 200000;
+        let bestIncome = 0;
+        let iterations = 0;
+        const maxIterations = 100;
+        
+        while (iterations < maxIterations && (high - low) > 10) {
+            const mid = (low + high) / 2;
+            const result = simulatePotWithExhaustion(person, mid, targetYear, incomeStartYear);
+            
+            if (result.exhaustionYear === null) {
+                // Pot never exhausted by target year - need higher income
+                low = mid;
+            } else if (result.exhaustionYear < targetYear) {
+                // Pot exhausted too early - need lower income
+                high = mid;
+            } else if (result.exhaustionYear === targetYear) {
+                // Found it - but fine-tune to get pot close to zero
+                bestIncome = mid;
+                // Check if we could go a bit higher
+                const testHigher = simulatePotWithExhaustion(person, mid + 50, targetYear, incomeStartYear);
+                if (testHigher.exhaustionYear === targetYear) {
+                    low = mid;
+                } else {
+                    high = mid;
+                }
+            } else {
+                // Exhaustion after target year (shouldn't happen with our model end)
+                low = mid;
+            }
+            iterations++;
+        }
+        
+        const optimalIncome = Math.round((low + high) / 2);
+        const finalResult = simulatePotWithExhaustion(person, optimalIncome, targetYear, incomeStartYear);
+        
+        // Verify it actually exhausts at the target year
+        if (finalResult.exhaustionYear !== targetYear && finalResult.exhaustionYear !== null) {
+            return { 
+                success: true, 
+                income: optimalIncome,
+                incomeStartYear: incomeStartYear,
+                actualExhaustionYear: finalResult.exhaustionYear,
+                targetYear: targetYear,
+                targetAge: targetAge,
+                note: `Note: Pot actually exhausts in ${finalResult.exhaustionYear}`
+            };
+        }
+        
+        if (finalResult.exhaustionYear === null && finalResult.pot > 1000) {
+            return {
+                success: false,
+                message: `Cannot find income to deplete pot by age ${targetAge}. Even at £${Math.round(high).toLocaleString()}, pot doesn't exhaust.`
+            };
+        }
+        
+        return {
+            success: true,
+            income: optimalIncome,
+            incomeStartYear: incomeStartYear,
+            finalPot: Math.round(finalResult.pot),
+            targetYear: targetYear,
+            targetAge: targetAge
+        };
+    }
+
+    /**
+     * Optimize income for a single person to stay within 20% basic rate band
+     * @param {string} person - 'eugene' or 'annabelle'
+     */
+    function optimizeForNoHigherTaxPerson(person) {
+        const startYear = person === 'eugene' ? (state.eugeneTaxOptStartYear || 2030) : (state.annabelleTaxOptStartYear || 2030);
+        const inflationOn = person === 'eugene' ? state.eugeneInflation : state.annabelleInflation;
+        
+        // Get threshold at start year (may have grown if after freeze)
+        const thresholdsAtStart = getTaxThresholds(startYear);
+        const threshold = thresholdsAtStart.basicRateThreshold;
+        
+        // Target income is the threshold (max before 40% tax)
+        const targetIncome = threshold;
+        
+        // Check affordability at threshold income
+        let maxStart = targetIncome;
+        let limited = false;
+        let dbOnly = false;
+        
+        let result = simulatePotWithExhaustion(person, targetIncome, 2054, startYear);
+        if (result.exhaustionYear !== null && result.exhaustionYear <= 2054) {
+            // Pot exhausts at threshold income - find maximum sustainable income
+            limited = true;
+            let low = 1000;
+            let high = targetIncome;
+            
+            for (let i = 0; i < 50; i++) {
+                const mid = Math.floor((low + high) / 2);
+                const testResult = simulatePotWithExhaustion(person, mid, 2054, startYear);
+                
+                if (testResult.exhaustionYear === null || testResult.exhaustionYear > 2054) {
+                    low = mid;
+                } else {
+                    high = mid;
+                }
+                
+                if (high - low <= 100) break;
+            }
+            
+            maxStart = Math.floor(low / 100) * 100;
+            
+            // Get DB income at start year
+            let dbAtStart;
+            if (person === 'eugene') {
+                dbAtStart = calculateStatePension(state.eugeneStateYear, state.eugeneStateAmount, startYear) +
+                           calculateDBPension(state.eugeneAvonYear, state.eugeneAvonAmount, startYear) +
+                           calculateDBPension(state.eugeneCivilYear, state.eugeneCivilAmount, startYear);
+            } else {
+                dbAtStart = calculateStatePension(state.annabelleStateYear, state.annabelleStateAmount, startYear) +
+                           calculateDBPension(state.annabelleTeachersYear, state.annabelleTeachersAmount, startYear);
+            }
+            
+            if (maxStart <= dbAtStart + 1000) {
+                maxStart = Math.round(dbAtStart);
+                dbOnly = true;
+            }
+        }
+        
+        // Check if DB income alone will ever exceed threshold
+        let dbWarning = null;
+        for (let year = startYear; year <= 2054; year++) {
+            let db;
+            if (person === 'eugene') {
+                db = calculateStatePension(state.eugeneStateYear, state.eugeneStateAmount, year) +
+                     calculateDBPension(state.eugeneAvonYear, state.eugeneAvonAmount, year) +
+                     calculateDBPension(state.eugeneCivilYear, state.eugeneCivilAmount, year);
+            } else {
+                db = calculateStatePension(state.annabelleStateYear, state.annabelleStateAmount, year) +
+                     calculateDBPension(state.annabelleTeachersYear, state.annabelleTeachersAmount, year);
+            }
+            
+            if (db > threshold && !dbWarning) {
+                dbWarning = { year, amount: Math.round(db) };
+                break;
+            }
+        }
+        
+        // Calculate tax at starting level
+        const taxStart = calculateTax(maxStart, startYear);
+        
+        // Calculate final year income (2054) with inflation from start year
+        const yearsToEnd = 2054 - startYear;
+        let finalYear = maxStart;
+        
+        if (inflationOn && yearsToEnd > 0) {
+            let mult = 1;
+            for (let i = 0; i < yearsToEnd; i++) {
+                const actualYear = startYear + i;
+                mult *= (1 + getInflationRate(null, actualYear));
+            }
+            finalYear = maxStart * mult;
+        }
+        
+        // Max 20% tax is on income from personal allowance to threshold (at start year)
+        const maxBasicRateTax = (threshold - thresholdsAtStart.personalAllowance) * state.basicRate;
+        
+        return {
+            success: true,
+            person: person,
+            income: maxStart,
+            idealIncome: targetIncome,
+            limited: limited,
+            dbOnly: dbOnly,
+            startYear: startYear,
+            taxStart: Math.round(taxStart),
+            finalYear: Math.round(finalYear),
+            finalTax: Math.round(calculateTax(Math.min(finalYear, threshold), 2054)),
+            threshold: threshold,
+            maxBasicRateTax: Math.round(maxBasicRateTax),
+            dbWarning: dbWarning,
+            inflationOn: inflationOn
+        };
+    }
+
+    // ============================================================================
+    // OPTIMISATION UI HANDLERS
+    // ============================================================================
+
+    function bindOptimisationButtons() {
+        // Eugene depletion optimisation
+        document.getElementById('optimizeEugene').addEventListener('click', () => {
+            const targetAge = parseInt(document.getElementById('eugeneDepletionAge').value);
+            const startYear = parseInt(document.getElementById('eugeneDepletionStartYear').value);
+            const result = optimizeForDepletionAge('eugene', targetAge, startYear);
+            const resultDiv = document.getElementById('depletionResult');
+            
+            if (result.success) {
+                // Set income override for the start year (this becomes new base, inflation carries forward)
+                setIncomeOverride(startYear, 'eugene', result.income);
+                
+                let message = `<strong>EI optimised:</strong> Target income set to £${result.income.toLocaleString()} from ${startYear} to deplete pot at age ${result.targetAge} (${result.targetYear}).`;
+                if (result.note) {
+                    message += `<br><em>${result.note}</em>`;
+                }
+                if (result.actualExhaustionYear) {
+                    message = `<strong>EI optimised:</strong> Target income set to £${result.income.toLocaleString()} from ${startYear}. ${result.note}`;
+                }
+                
+                resultDiv.innerHTML = message;
+                resultDiv.className = 'opt-result visible';
+                // Note: setIncomeOverride already calls update()
+            } else {
+                resultDiv.innerHTML = `<strong>EI:</strong> ${result.message}`;
+                resultDiv.className = 'opt-result visible warning';
+            }
+        });
+        
+        // AI depletion optimisation
+        document.getElementById('optimizeAnnabelle').addEventListener('click', () => {
+            const targetAge = parseInt(document.getElementById('annabelleDepletionAge').value);
+            const startYear = parseInt(document.getElementById('annabelleDepletionStartYear').value);
+            const result = optimizeForDepletionAge('annabelle', targetAge, startYear);
+            const resultDiv = document.getElementById('depletionResult');
+            
+            if (result.success) {
+                // Set income override for the start year (this becomes new base, inflation carries forward)
+                setIncomeOverride(startYear, 'annabelle', result.income);
+                
+                let message = `<strong>AI optimised:</strong> Target income set to £${result.income.toLocaleString()} from ${startYear} to deplete pot at age ${result.targetAge} (${result.targetYear}).`;
+                if (result.note) {
+                    message += `<br><em>${result.note}</em>`;
+                }
+                if (result.actualExhaustionYear) {
+                    message = `<strong>AI optimised:</strong> Target income set to £${result.income.toLocaleString()} from ${startYear}. ${result.note}`;
+                }
+                
+                resultDiv.innerHTML = message;
+                resultDiv.className = 'opt-result visible';
+                // Note: setIncomeOverride already calls update()
+            } else {
+                resultDiv.innerHTML = `<strong>AI:</strong> ${result.message}`;
+                resultDiv.className = 'opt-result visible warning';
+            }
+        });
+        
+        // EI Tax optimisation
+        document.getElementById('optimizeTaxEugene').addEventListener('click', () => {
+            const result = optimizeForNoHigherTaxPerson('eugene');
+            const resultDiv = document.getElementById('taxOptResult');
+            
+            if (result.success) {
+                setIncomeOverride(result.startYear, 'eugene', result.income);
+                
+                const label = 'EI';
+                let html = `<strong>${label} - Maximum income within 20% tax band:</strong><br>`;
+                html += `<strong>Income:</strong> £${result.income.toLocaleString()} (${result.startYear})`;
+                if (!result.dbOnly) {
+                    html += ` → £${result.finalYear.toLocaleString()} (2054)`;
+                    html += result.inflationOn ? ' <em>(with inflation)</em>' : ' <em>(fixed)</em>';
+                }
+                if (result.dbOnly) {
+                    html += `<br><span style="color: #c05621;">⚠️ DB pension only (funds insufficient for higher income)</span>`;
+                } else if (result.limited) {
+                    html += `<br><span style="color: #c05621;">⚠️ Limited by fund availability (ideal: £${result.idealIncome.toLocaleString()})</span>`;
+                }
+                html += `<br><strong>Tax:</strong> £${result.taxStart.toLocaleString()} (${result.startYear})`;
+                if (!result.dbOnly) {
+                    html += ` → £${result.finalTax.toLocaleString()} (2054)`;
+                }
+                html += `<br><br><strong>Basic rate threshold:</strong> £${result.threshold.toLocaleString()}`;
+                html += `<br><strong>Max tax at 20%:</strong> £${result.maxBasicRateTax.toLocaleString()}/year`;
+                
+                if (result.dbWarning) {
+                    html += `<br><br><span style="color: #975a16;">⚠️ ${label}'s DB income (£${result.dbWarning.amount.toLocaleString()}) exceeds threshold from ${result.dbWarning.year}. Higher rate tax unavoidable.</span>`;
+                }
+                
+                if (result.inflationOn && !result.limited && !result.dbOnly) {
+                    html += `<br><br><em>💡 Note: With inflation ON, income will exceed £50,270 in later years.</em>`;
+                }
+                if (result.limited && !result.dbOnly) {
+                    html += `<br><br><em>💡 Income is set to the maximum sustainable level.</em>`;
+                }
+                
+                resultDiv.innerHTML = html;
+                resultDiv.className = 'opt-result visible';
+            }
+        });
+        
+        // AI Tax optimisation
+        document.getElementById('optimizeTaxAnnabelle').addEventListener('click', () => {
+            const result = optimizeForNoHigherTaxPerson('annabelle');
+            const resultDiv = document.getElementById('taxOptResult');
+            
+            if (result.success) {
+                setIncomeOverride(result.startYear, 'annabelle', result.income);
+                
+                const label = 'AI';
+                let html = `<strong>${label} - Maximum income within 20% tax band:</strong><br>`;
+                html += `<strong>Income:</strong> £${result.income.toLocaleString()} (${result.startYear})`;
+                if (!result.dbOnly) {
+                    html += ` → £${result.finalYear.toLocaleString()} (2054)`;
+                    html += result.inflationOn ? ' <em>(with inflation)</em>' : ' <em>(fixed)</em>';
+                }
+                if (result.dbOnly) {
+                    html += `<br><span style="color: #c05621;">⚠️ DB pension only (funds insufficient for higher income)</span>`;
+                } else if (result.limited) {
+                    html += `<br><span style="color: #c05621;">⚠️ Limited by fund availability (ideal: £${result.idealIncome.toLocaleString()})</span>`;
+                }
+                html += `<br><strong>Tax:</strong> £${result.taxStart.toLocaleString()} (${result.startYear})`;
+                if (!result.dbOnly) {
+                    html += ` → £${result.finalTax.toLocaleString()} (2054)`;
+                }
+                html += `<br><br><strong>Basic rate threshold:</strong> £${result.threshold.toLocaleString()}`;
+                html += `<br><strong>Max tax at 20%:</strong> £${result.maxBasicRateTax.toLocaleString()}/year`;
+                
+                if (result.dbWarning) {
+                    html += `<br><br><span style="color: #975a16;">⚠️ ${label}'s DB income (£${result.dbWarning.amount.toLocaleString()}) exceeds threshold from ${result.dbWarning.year}. Higher rate tax unavoidable.</span>`;
+                }
+                
+                if (result.inflationOn && !result.limited && !result.dbOnly) {
+                    html += `<br><br><em>💡 Note: With inflation ON, income will exceed £50,270 in later years.</em>`;
+                }
+                if (result.limited && !result.dbOnly) {
+                    html += `<br><br><em>💡 Income is set to the maximum sustainable level.</em>`;
+                }
+                
+                resultDiv.innerHTML = html;
+                resultDiv.className = 'opt-result visible';
+            }
+        });
+    }
+
+    // ============================================================================
+    // SAVE/LOAD SCENARIO FUNCTIONS (with File System Access API support)
+    // ============================================================================
+    
+    // Store directory handle for persistent save location
+    let savedDirectoryHandle = null;
+    const DB_NAME = 'PensionsMapDB';
+    const STORE_NAME = 'settings';
+    
+    // IndexedDB helper functions
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onupgradeneeded = (e) => {
+                e.target.result.createObjectStore(STORE_NAME);
+            };
+        });
+    }
+    
+    async function storeDirectoryHandle(handle) {
+        try {
+            const db = await openDB();
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).put(handle, 'directoryHandle');
+            await new Promise((resolve, reject) => {
+                tx.oncomplete = resolve;
+                tx.onerror = () => reject(tx.error);
+            });
+        } catch (err) {
+            console.log('Could not store directory handle:', err);
+        }
+    }
+    
+    async function getStoredDirectoryHandle() {
+        try {
+            const db = await openDB();
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const request = tx.objectStore(STORE_NAME).get('directoryHandle');
+            return new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        } catch (err) {
+            console.log('Could not retrieve directory handle:', err);
+            return null;
+        }
+    }
+    
+    async function verifyPermission(handle) {
+        const options = { mode: 'readwrite' };
+        if (await handle.queryPermission(options) === 'granted') {
+            return true;
+        }
+        if (await handle.requestPermission(options) === 'granted') {
+            return true;
+        }
+        return false;
+    }
+    
+    function updateFolderStatus(name) {
+        const status = document.getElementById('saveFolderStatus');
+        if (status) {
+            status.textContent = name ? `📁 ${name}` : '';
+            status.title = name ? `Saving to: ${name}` : '';
+        }
+    }
+    
+    async function setSaveFolder() {
+        // Check if File System Access API is supported
+        if (!('showDirectoryPicker' in window)) {
+            alert('Your browser does not support the File System Access API.\n\nThis feature works in Chrome and Edge.\n\nIn other browsers, use the standard Save dialog to navigate to your Dropbox folder.');
+            return;
+        }
+        
+        try {
+            const handle = await window.showDirectoryPicker({
+                mode: 'readwrite',
+                startIn: 'documents'
+            });
+            
+            savedDirectoryHandle = handle;
+            await storeDirectoryHandle(handle);
+            updateFolderStatus(handle.name);
+            alert(`Save folder set to: ${handle.name}\n\nScenarios will now save directly to this folder.`);
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('Error selecting folder:', err);
+                alert('Could not set save folder: ' + err.message);
+            }
+        }
+    }
+    
+    async function initSavedFolder() {
+        if (!('showDirectoryPicker' in window)) return;
+        
+        try {
+            const handle = await getStoredDirectoryHandle();
+            if (handle) {
+                // Verify we still have permission
+                if (await verifyPermission(handle)) {
+                    savedDirectoryHandle = handle;
+                    updateFolderStatus(handle.name);
+                } else {
+                    updateFolderStatus(null);
+                }
+            }
+        } catch (err) {
+            console.log('Could not restore saved folder:', err);
+        }
+    }
+    
+    async function saveScenario() {
+        const scenarioName = prompt('Enter a name for this scenario:', 'My Pension Scenario');
+        if (!scenarioName) return;
+        
+        const scenario = {
+            name: scenarioName,
+            savedAt: new Date().toISOString(),
+            version: '1.0',
+            state: { ...state }
+        };
+        
+        const fileName = `${scenarioName.replace(/[^a-z0-9]/gi, '_')}_pension_scenario.json`;
+        const jsonContent = JSON.stringify(scenario, null, 2);
+        
+        // Try to use File System Access API if we have a saved directory
+        if (savedDirectoryHandle && 'showDirectoryPicker' in window) {
+            try {
+                // Re-verify permission (may have expired)
+                if (await verifyPermission(savedDirectoryHandle)) {
+                    const fileHandle = await savedDirectoryHandle.getFileHandle(fileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(jsonContent);
+                    await writable.close();
+                    alert(`Scenario saved to ${savedDirectoryHandle.name}/${fileName}`);
+                    return;
+                } else {
+                    // Permission denied, clear the saved handle
+                    savedDirectoryHandle = null;
+                    updateFolderStatus(null);
+                }
+            } catch (err) {
+                console.error('Error saving to folder:', err);
+                // Fall through to standard download
+            }
+        }
+        
+        // Fallback to standard download
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    function loadScenario(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const scenario = JSON.parse(e.target.result);
+                
+                if (!scenario.state) {
+                    alert('Invalid scenario file format.');
+                    return;
+                }
+                
+                // Merge loaded state with current state (to handle any new properties)
+                Object.assign(state, scenario.state);
+                
+                // Update all input fields to reflect loaded state
+                updateInputsFromState();
+                
+                // Recalculate and redraw
+                update();
+                
+                alert(`Scenario "${scenario.name}" loaded successfully!`);
+            } catch (err) {
+                alert('Error loading scenario file: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    }
+    
+    function updateInputsFromState() {
+        // Global
+        document.getElementById('dbGrowthRate').value = state.dbGrowthRate * 100;
+        document.getElementById('dbGrowthEnabled').checked = state.dbGrowthEnabled !== false;
+        document.getElementById('dcGrowthRate').value = state.dcGrowthRate * 100;
+        document.getElementById('dcGrowthEnabled').checked = state.dcGrowthEnabled !== false;
+        document.getElementById('statePensionGrowthRate').value = state.statePensionGrowthRate * 100;
+        document.getElementById('statePensionGrowthEnabled').checked = state.statePensionGrowthEnabled !== false;
+        document.getElementById('annualLivingCosts').value = state.annualLivingCosts;
+        document.getElementById('livingCostsInflation').checked = state.livingCostsInflation;
+        
+        // EI
+        document.getElementById('eugeneTargetIncome').value = state.eugeneTargetIncome;
+        document.getElementById('eugeneInflation').checked = state.eugeneInflation;
+        document.getElementById('eugeneMonthlyContrib').value = state.eugeneMonthlyContrib;
+        document.getElementById('eugenePot1Balance').value = state.eugenePot1Balance;
+        document.getElementById('eugenePot2Balance').value = state.eugenePot2Balance;
+        document.getElementById('eugeneAge2025').value = state.eugeneAge2025;
+        document.getElementById('eugeneContribStopYear').value = state.eugeneContribStopYear;
+        
+        // AI
+        document.getElementById('annabelleTargetIncome').value = state.annabelleTargetIncome;
+        document.getElementById('annabelleInflation').checked = state.annabelleInflation;
+        document.getElementById('annabelleMonthlyContrib').value = state.annabelleMonthlyContrib;
+        document.getElementById('annabelleStartingBalance').value = state.annabelleStartingBalance;
+        document.getElementById('annabelleAge2025').value = state.annabelleAge2025;
+        document.getElementById('annabelleContribStopYear').value = state.annabelleContribStopYear;
+        
+        // Tax
+        document.getElementById('personalAllowance').value = state.personalAllowance;
+        document.getElementById('basicRateThreshold').value = state.basicRateThreshold;
+        document.getElementById('taxNewThresholdsYear').value = state.taxNewThresholdsYear || 2031;
+        document.getElementById('taxNewPersonalAllowance').value = state.taxNewPersonalAllowance || 12570;
+        document.getElementById('taxNewBasicRateThreshold').value = state.taxNewBasicRateThreshold || 50270;
+        
+        // Tax growth rate radio buttons
+        const growthRate = (state.taxThresholdGrowthRate || 0.02) * 100;
+        const customRateInput = document.getElementById('taxGrowthCustomRate');
+        if (growthRate === 0) {
+            document.getElementById('taxGrowth0').checked = true;
+            customRateInput.disabled = true;
+        } else if (growthRate === 2) {
+            document.getElementById('taxGrowth2').checked = true;
+            customRateInput.disabled = true;
+        } else if (growthRate === 3) {
+            document.getElementById('taxGrowth3').checked = true;
+            customRateInput.disabled = true;
+        } else {
+            document.getElementById('taxGrowthCustom').checked = true;
+            customRateInput.disabled = false;
+            customRateInput.value = growthRate;
+        }
+        
+        // Inflation
+        document.getElementById('inflationBaseRate').value = (state.inflationBaseRate || 0.03) * 100;
+        document.getElementById('inflationChangeYear').value = state.inflationChangeYear || 2025;
+        document.getElementById('inflationNewRate').value = (state.inflationNewRate || 0.03) * 100;
+        
+        // EI DB Pensions
+        document.getElementById('eugeneStateYear').value = state.eugeneStateYear;
+        document.getElementById('eugeneStateAmount').value = state.eugeneStateAmount;
+        document.getElementById('eugeneAvonYear').value = state.eugeneAvonYear;
+        document.getElementById('eugeneAvonAmount').value = state.eugeneAvonAmount;
+        document.getElementById('eugeneCivilYear').value = state.eugeneCivilYear;
+        document.getElementById('eugeneCivilAmount').value = state.eugeneCivilAmount;
+        
+        // AI DB Pensions
+        document.getElementById('annabelleStateYear').value = state.annabelleStateYear;
+        document.getElementById('annabelleStateAmount').value = state.annabelleStateAmount;
+        document.getElementById('annabelleTeachersYear').value = state.annabelleTeachersYear;
+        document.getElementById('annabelleTeachersAmount').value = state.annabelleTeachersAmount;
+        
+        // EI Lump Sum
+        document.getElementById('eugeneLumpSumYear').value = state.eugeneLumpSumYear || 2030;
+        document.getElementById('eugeneLumpSumPct').value = (state.eugeneLumpSumPct || 0.25) * 100;
+        
+        // AI Lump Sum
+        document.getElementById('annabelleLumpSumYear').value = state.annabelleLumpSumYear;
+        document.getElementById('annabelleLumpSumPct').value = state.annabelleLumpSumPct * 100;
+        
+        // Optimisation start years
+        document.getElementById('eugeneDepletionStartYear').value = state.eugeneDepletionStartYear || 2030;
+        document.getElementById('annabelleDepletionStartYear').value = state.annabelleDepletionStartYear || 2030;
+        document.getElementById('eugeneTaxOptStartYear').value = state.eugeneTaxOptStartYear || 2030;
+        document.getElementById('annabelleTaxOptStartYear').value = state.annabelleTaxOptStartYear || 2030;
+    }
+    
+    function printScenario() {
+        window.print();
+    }
+
+    // ============================================================================
+    // INITIALIZATION
+    // ============================================================================
+
+    document.addEventListener('DOMContentLoaded', () => {
+        bindInputs();
+        bindOptimisationButtons();
+        
+        // Bind tax threshold growth rate radio buttons
+        const taxGrowthRadios = document.querySelectorAll('input[name="taxGrowthPreset"]');
+        const customRateInput = document.getElementById('taxGrowthCustomRate');
+        
+        taxGrowthRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customRateInput.disabled = false;
+                    state.taxThresholdGrowthRate = parseFloat(customRateInput.value) / 100;
+                } else {
+                    customRateInput.disabled = true;
+                    state.taxThresholdGrowthRate = parseFloat(e.target.value) / 100;
+                }
+                update();
+            });
+        });
+        
+        customRateInput.addEventListener('input', () => {
+            if (document.getElementById('taxGrowthCustom').checked) {
+                state.taxThresholdGrowthRate = parseFloat(customRateInput.value) / 100;
+                update();
+            }
+        });
+        
+        // Bind tax optimisation start year inputs
+        document.getElementById('eugeneTaxOptStartYear').addEventListener('change', (e) => {
+            state.eugeneTaxOptStartYear = parseInt(e.target.value);
+        });
+        document.getElementById('annabelleTaxOptStartYear').addEventListener('change', (e) => {
+            state.annabelleTaxOptStartYear = parseInt(e.target.value);
+        });
+        
+        // Bind depletion optimisation start year inputs
+        document.getElementById('eugeneDepletionStartYear').addEventListener('change', (e) => {
+            state.eugeneDepletionStartYear = parseInt(e.target.value);
+        });
+        document.getElementById('annabelleDepletionStartYear').addEventListener('change', (e) => {
+            state.annabelleDepletionStartYear = parseInt(e.target.value);
+        });
+        
+        // Bind clear all overrides button
+        document.getElementById('clearAllOverrides').addEventListener('click', clearAllOverrides);
+        
+        // Bind save/load/print buttons
+        document.getElementById('saveScenario').addEventListener('click', saveScenario);
+        document.getElementById('setSaveFolder').addEventListener('click', setSaveFolder);
+        document.getElementById('loadScenario').addEventListener('click', () => {
+            document.getElementById('loadScenarioFile').click();
+        });
+        document.getElementById('loadScenarioFile').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                loadScenario(e.target.files[0]);
+                e.target.value = ''; // Reset for next load
+            }
+        });
+        document.getElementById('printScenario').addEventListener('click', printScenario);
+        
+        // Initialize saved folder from IndexedDB
+        initSavedFolder();
+        
+        update();
+        
+        // Redraw chart on window resize
+        window.addEventListener('resize', () => {
+            const { results: data } = calculate();
+            drawChart(data);
+        });
+    });
+    </script>
+</body>
+</html>
